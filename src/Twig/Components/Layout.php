@@ -36,7 +36,11 @@ class Layout
     use ComponentToolsTrait;
     use DefaultActionTrait;
 
-    #[LiveProp(writable: ['queryString', 'activeSort', 'activeHitsPerPage'], useSerializerForHydration: true)]
+    #[LiveProp(
+        writable: ['queryString', 'activeSort', 'activeHitsPerPage'],
+        useSerializerForHydration: true,
+        onUpdated: ['queryString' => 'resetCurrentPage', 'activeSort' => 'resetCurrentPage', 'activeHitsPerPage' => 'resetCurrentPage']
+    )]
     public ?Query $query = null;
 
     #[LiveProp]
@@ -79,7 +83,9 @@ class Layout
         $this->searcher->search($this->query, $this->search);
 
         if ($this->search->hasUrlRewriting()) {
-            $this->dispatchBrowserEvent('history:update', ['url' => $this->getUrlFormater()->generateUrl($this->currentRequest, $this->search, $this->query)]);
+            $this->dispatchBrowserEvent('ux-search:url:update', [
+                'url' => $this->getUrlFormater()->generateUrl($this->currentRequest, $this->search, $this->query),
+            ]);
         }
     }
 
@@ -87,6 +93,11 @@ class Layout
     public function changeCurrentPage(#[LiveArg] int $page): void
     {
         $this->query->setCurrentPage($page);
+    }
+
+    public function resetCurrentPage(string|int|null $previousValue): void
+    {
+        $this->query->setCurrentPage(1);
     }
 
     #[LiveAction]
