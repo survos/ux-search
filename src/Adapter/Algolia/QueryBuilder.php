@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Mezcalito\UxSearchBundle\Adapter\Algolia;
 
+use Mezcalito\UxSearchBundle\Exception\UnsupportedFilterException;
 use Mezcalito\UxSearchBundle\Search\Filter\FilterInterface;
 use Mezcalito\UxSearchBundle\Search\Filter\RangeFilter;
 use Mezcalito\UxSearchBundle\Search\Filter\TermFilter;
@@ -21,13 +22,16 @@ use Mezcalito\UxSearchBundle\Search\SearchInterface;
 
 class QueryBuilder
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function build(Query $query, SearchInterface $search): array
     {
         $indexName = $search->getIndexName();
         $options = $search->getResolvedAdapterParameters();
 
         $hitsPerPage = $query->getActiveHitsPerPage();
-        $queries = [];
+        $queries = ['requests' => []];
 
         if ($query->getActiveSort()) {
             $indexName = $query->getActiveSort();
@@ -52,7 +56,7 @@ class QueryBuilder
             $algoliaQuery['facets'] = $displayedFacets;
         }
 
-        $queries[] = $algoliaQuery;
+        $queries['requests'][] = $algoliaQuery;
 
         $activeFilters = $query->getActiveFilters();
 
@@ -64,7 +68,7 @@ class QueryBuilder
                 }
             }
 
-            $queries[] = [
+            $queries['requests'][] = [
                 'indexName' => $indexName,
                 'query' => $query->getQueryString(),
                 'facets' => [$activeFilter->getProperty()],
@@ -92,17 +96,17 @@ class QueryBuilder
                     $formated[] = implode(' OR ', $or);
                     break;
                 case RangeFilter::class:
-                    if ($filter->getMin()) {
-                        $formated[] = \sprintf('%s >= %d', $filter->getProperty(), $filter->getMin());
+                    if (null !== $filter->getMin()) {
+                        $formated[] = \sprintf('%s >= %s', $filter->getProperty(), $filter->getMin());
                     }
 
-                    if ($filter->getMax()) {
-                        $formated[] = \sprintf('%s <= %d', $filter->getProperty(), $filter->getMax());
+                    if (null !== $filter->getMax()) {
+                        $formated[] = \sprintf('%s <= %s', $filter->getProperty(), $filter->getMax());
                     }
 
                     break;
                 default:
-                    throw new \Exception(\sprintf('Facet filter "%s" not supported', $filter::class));
+                    throw UnsupportedFilterException::filterNotSupported($filter::class);
             }
         }
 

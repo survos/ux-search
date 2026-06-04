@@ -45,7 +45,7 @@ class SearcherTest extends TestCase
 
         $preListenerCalled = false;
         $availableHitsPerPageOnPreSearch = null;
-        $preListener = function (PreSearchEvent $event) use (&$preListenerCalled, &$availableHitsPerPageOnPreSearch) {
+        $preListener = static function (PreSearchEvent $event) use (&$preListenerCalled, &$availableHitsPerPageOnPreSearch) {
             $preListenerCalled = true;
             $event->getQuery()->setQueryString('modified by preListener');
             $availableHitsPerPageOnPreSearch = $event->getSearch()->getAvailableHitsPerPage();
@@ -79,11 +79,12 @@ class SearcherTest extends TestCase
 
         $adapter = $this->createMock(AdapterInterface::class);
         $adapter
+            ->expects($this->once())
             ->method('search')
             ->with($query, $search)
             ->willReturn($resultSet);
 
-        $adapterProvider = $this->createMock(AdapterProvider::class);
+        $adapterProvider = $this->createStub(AdapterProvider::class);
         $adapterProvider
             ->method('getAdapter')
             ->willReturn($adapter);

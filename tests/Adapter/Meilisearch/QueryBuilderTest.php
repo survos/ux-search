@@ -46,6 +46,7 @@ class QueryBuilderTest extends TestCase
             MeilisearchAdapter::ATTRIBUTES_TO_HIGHLIGHT_PARAM => [],
             MeilisearchAdapter::HIGHLIGHT_PRE_TAG_PARAM => '<em>',
             MeilisearchAdapter::HIGHLIGHT_POST_TAG_PARAM => '</em>',
+            MeilisearchAdapter::DISTINCT_PARAM => 'product_id',
         ]);
     }
 
@@ -75,6 +76,7 @@ class QueryBuilderTest extends TestCase
             'attributesToHighlight' => [],
             'highlightPreTag' => '<em>',
             'highlightPostTag' => '</em>',
+            'distinct' => 'product_id',
         ], $searchQuery->toArray());
     }
 
@@ -103,6 +105,7 @@ class QueryBuilderTest extends TestCase
             'attributesToHighlight' => [],
             'highlightPreTag' => '<em>',
             'highlightPostTag' => '</em>',
+            'distinct' => 'product_id',
         ], $searchQuery->toArray());
     }
 
@@ -134,6 +137,7 @@ class QueryBuilderTest extends TestCase
             'attributesToHighlight' => [],
             'highlightPreTag' => '<em>',
             'highlightPostTag' => '</em>',
+            'distinct' => 'product_id',
         ], $searchQuery->toArray());
     }
 
@@ -167,6 +171,7 @@ class QueryBuilderTest extends TestCase
             'attributesToHighlight' => [],
             'highlightPreTag' => '<em>',
             'highlightPostTag' => '</em>',
+            'distinct' => 'product_id',
         ], $searchQuery->toArray());
     }
 
@@ -209,6 +214,7 @@ class QueryBuilderTest extends TestCase
             'highlightPostTag' => '</em>',
             'showRankingScore' => true,
             'facets' => ['color', 'price'],
+            'distinct' => 'product_id',
         ], $mainSearchQuery->toArray());
 
         $colorFacetQuery = $searchQueries[1];
@@ -233,5 +239,125 @@ class QueryBuilderTest extends TestCase
             'facets' => ['price'],
             'limit' => 0,
         ], $priceFacetQuery->toArray());
+    }
+
+    public function testFloatRangeFilter(): void
+    {
+        $this->search->method('getFacets')->willReturn([
+            new Facet('price', 'Price'),
+        ]);
+
+        $query = (new Query())
+            ->addActiveFilter(new RangeFilter('price', 19.99, 99.95))
+        ;
+
+        $searchQueries = $this->queryBuilder->build($query, $this->search);
+
+        $this->assertCount(2, $searchQueries);
+
+        $mainSearchQuery = $searchQueries[0];
+
+        $this->assertInstanceOf(SearchQuery::class, $mainSearchQuery);
+        $this->assertEquals([
+            'indexUid' => 'test',
+            'filter' => [
+                'price >= 19.99',
+                'price <= 99.95',
+            ],
+            'q' => '',
+            'sort' => [],
+            'hitsPerPage' => 12,
+            'page' => 1,
+            'attributesToRetrieve' => ['*'],
+            'attributesToCrop' => [],
+            'cropLength' => 10,
+            'cropMarker' => '...',
+            'attributesToHighlight' => [],
+            'highlightPreTag' => '<em>',
+            'highlightPostTag' => '</em>',
+            'showRankingScore' => true,
+            'facets' => ['price'],
+            'distinct' => 'product_id',
+        ], $mainSearchQuery->toArray());
+    }
+
+    public function testZeroValueRangeFilter(): void
+    {
+        $this->search->method('getFacets')->willReturn([
+            new Facet('stock', 'Stock'),
+        ]);
+
+        $query = (new Query())
+            ->addActiveFilter(new RangeFilter('stock', 0, 100))
+        ;
+
+        $searchQueries = $this->queryBuilder->build($query, $this->search);
+
+        $this->assertCount(2, $searchQueries);
+
+        $mainSearchQuery = $searchQueries[0];
+
+        $this->assertInstanceOf(SearchQuery::class, $mainSearchQuery);
+        $this->assertEquals([
+            'indexUid' => 'test',
+            'filter' => [
+                'stock >= 0',
+                'stock <= 100',
+            ],
+            'q' => '',
+            'sort' => [],
+            'hitsPerPage' => 12,
+            'page' => 1,
+            'attributesToRetrieve' => ['*'],
+            'attributesToCrop' => [],
+            'cropLength' => 10,
+            'cropMarker' => '...',
+            'attributesToHighlight' => [],
+            'highlightPreTag' => '<em>',
+            'highlightPostTag' => '</em>',
+            'showRankingScore' => true,
+            'facets' => ['stock'],
+            'distinct' => 'product_id',
+        ], $mainSearchQuery->toArray());
+    }
+
+    public function testZeroMaxValueRangeFilter(): void
+    {
+        $this->search->method('getFacets')->willReturn([
+            new Facet('discount', 'Discount'),
+        ]);
+
+        $query = (new Query())
+            ->addActiveFilter(new RangeFilter('discount', -10, 0))
+        ;
+
+        $searchQueries = $this->queryBuilder->build($query, $this->search);
+
+        $this->assertCount(2, $searchQueries);
+
+        $mainSearchQuery = $searchQueries[0];
+
+        $this->assertInstanceOf(SearchQuery::class, $mainSearchQuery);
+        $this->assertEquals([
+            'indexUid' => 'test',
+            'filter' => [
+                'discount >= -10',
+                'discount <= 0',
+            ],
+            'q' => '',
+            'sort' => [],
+            'hitsPerPage' => 12,
+            'page' => 1,
+            'attributesToRetrieve' => ['*'],
+            'attributesToCrop' => [],
+            'cropLength' => 10,
+            'cropMarker' => '...',
+            'attributesToHighlight' => [],
+            'highlightPreTag' => '<em>',
+            'highlightPostTag' => '</em>',
+            'showRankingScore' => true,
+            'facets' => ['discount'],
+            'distinct' => 'product_id',
+        ], $mainSearchQuery->toArray());
     }
 }

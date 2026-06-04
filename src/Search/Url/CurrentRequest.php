@@ -17,6 +17,9 @@ use Symfony\Component\HttpFoundation\Request;
 
 readonly class CurrentRequest
 {
+    /**
+     * @param array<string, mixed> $parameters
+     */
     public function __construct(
         public string $route,
         public array $parameters,
@@ -25,7 +28,7 @@ readonly class CurrentRequest
 
     public static function fromRequest(Request $request): self
     {
-        $parameters = array_filter(array_merge($request->attributes->all(), $request->query->all()), fn ($key) => !str_starts_with((string) $key, '_'), \ARRAY_FILTER_USE_KEY);
+        $parameters = array_filter(array_merge($request->attributes->all(), $request->query->all()), static fn ($key) => !str_starts_with((string) $key, '_'), \ARRAY_FILTER_USE_KEY);
 
         return new self($request->attributes->get('_route'), $parameters);
     }

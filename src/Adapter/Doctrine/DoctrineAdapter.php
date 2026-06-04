@@ -66,7 +66,7 @@ readonly class DoctrineAdapter implements AdapterInterface
         $resolver->setDefaults([
             self::MAX_FACET_VALUES_PARAM => 100,
             self::QUERY_BUILDER_ALIAS => 'o',
-            self::QUERY_BUILDER => function (QueryBuilder $queryBuilder) {},
+            self::QUERY_BUILDER => static function (QueryBuilder $queryBuilder) {},
             self::SEARCH_FIELDS => [],
         ]);
 
@@ -76,6 +76,9 @@ readonly class DoctrineAdapter implements AdapterInterface
         $resolver->setAllowedTypes(self::SEARCH_FIELDS, 'string[]');
     }
 
+    /**
+     * @return array<string, FacetTermDistribution>
+     */
     private function getFacetDistributions(Query $query, SearchInterface $search): array
     {
         $distributions = [];
@@ -104,7 +107,7 @@ readonly class DoctrineAdapter implements AdapterInterface
 
             $values = $checkedFacets + $uncheckedFacets;
 
-            $distributions[] = (new FacetTermDistribution())
+            $distributions[$facet->getProperty()] = (new FacetTermDistribution())
                 ->setProperty($facet->getProperty())
                 ->setValues($values)
                 ->setCheckedValues($checkedValues);
@@ -113,6 +116,9 @@ readonly class DoctrineAdapter implements AdapterInterface
         return $distributions;
     }
 
+    /**
+     * @return array<string, FacetStat>
+     */
     private function getFacetStats(Query $query, SearchInterface $search): array
     {
         $stats = [];
@@ -137,7 +143,7 @@ readonly class DoctrineAdapter implements AdapterInterface
                 continue;
             }
 
-            $stats[] = (new FacetStat(
+            $stats[$facet->getProperty()] = (new FacetStat(
                 property: $facet->getProperty(),
                 min: $rs['min'] ?? 0,
                 max: $rs['max'] ?? 0,

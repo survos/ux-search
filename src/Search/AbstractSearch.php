@@ -18,8 +18,9 @@ use Mezcalito\UxSearchBundle\Exception\SearchException;
 use Mezcalito\UxSearchBundle\Search\Url\DefaultUrlFormater;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
-abstract class AbstractSearch implements SearchInterface
+abstract class AbstractSearch implements SearchInterface, ResetInterface
 {
     /** @var int[] */
     private array $availableHitsPerPage = [12];
@@ -32,14 +33,19 @@ abstract class AbstractSearch implements SearchInterface
 
     private ?EventDispatcher $eventDispatcher = null;
 
+    /** @var array<string, mixed> */
     private array $adapterParameters = [];
 
+    /** @var array<string, mixed> */
     private array $resolvedAdapterParameters = [];
 
-    private bool $urlRewritting = false;
+    private bool $urlRewriting = false;
 
     private ?string $urlFormater = null;
 
+    /**
+     * @param array<string, mixed> $options
+     */
     public function create(array $options = []): static
     {
         $this->eventDispatcher = new EventDispatcher();
@@ -48,6 +54,9 @@ abstract class AbstractSearch implements SearchInterface
         return $this;
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
     public function build(array $options = []): void
     {
     }
@@ -70,11 +79,17 @@ abstract class AbstractSearch implements SearchInterface
         return null;
     }
 
+    /**
+     * @return int[]
+     */
     public function getAvailableHitsPerPage(): array
     {
         return $this->availableHitsPerPage;
     }
 
+    /**
+     * @param int[] $availableHitsPerPage
+     */
     public function setAvailableHitsPerPage(array $availableHitsPerPage): static
     {
         $this->availableHitsPerPage = $availableHitsPerPage;
@@ -89,11 +104,17 @@ abstract class AbstractSearch implements SearchInterface
         return $this;
     }
 
+    /**
+     * @return Sort[]
+     */
     public function getAvailableSorts(): array
     {
         return $this->availableSorts;
     }
 
+    /**
+     * @param array<string, mixed> $props
+     */
     public function addFacet(string $property, string $label, ?string $displayComponent = null, array $props = []): static
     {
         $this->facets[] = (new Facet($property, $label, $displayComponent, $props));
@@ -101,6 +122,9 @@ abstract class AbstractSearch implements SearchInterface
         return $this;
     }
 
+    /**
+     * @return Facet[]
+     */
     public function getFacets(): array
     {
         return $this->facets;
@@ -136,11 +160,17 @@ abstract class AbstractSearch implements SearchInterface
         return $this;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getAdapterParameters(): array
     {
         return $this->adapterParameters;
     }
 
+    /**
+     * @param array<string, mixed> $adapterParameters
+     */
     public function setAdapterParameters(array $adapterParameters): static
     {
         $this->adapterParameters = $adapterParameters;
@@ -148,6 +178,9 @@ abstract class AbstractSearch implements SearchInterface
         return $this;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getResolvedAdapterParameters(): array
     {
         return $this->resolvedAdapterParameters;
@@ -158,6 +191,9 @@ abstract class AbstractSearch implements SearchInterface
         return $this->resolvedAdapterParameters[$name] ?? null;
     }
 
+    /**
+     * @param array<string, mixed> $resolvedAdapterParameters
+     */
     public function setResolvedAdapterParameters(array $resolvedAdapterParameters): static
     {
         $this->resolvedAdapterParameters = $resolvedAdapterParameters;
@@ -169,12 +205,11 @@ abstract class AbstractSearch implements SearchInterface
     {
         $query = new Query();
 
-        if ($this->availableHitsPerPage) {
+        if ([] !== $this->availableHitsPerPage) {
             $query->setActiveHitsPerPage(current($this->availableHitsPerPage));
         }
 
-        if ($this->availableSorts) {
-            /** @var Sort $defaultSort */
+        if ([] !== $this->availableSorts) {
             $defaultSort = current($this->availableSorts);
             $query->setActiveSort($defaultSort->getKey());
         }
@@ -184,14 +219,14 @@ abstract class AbstractSearch implements SearchInterface
 
     public function enableUrlRewriting(): static
     {
-        $this->urlRewritting = true;
+        $this->urlRewriting = true;
 
         return $this;
     }
 
     public function hasUrlRewriting(): bool
     {
-        return $this->urlRewritting;
+        return $this->urlRewriting;
     }
 
     public function getUrlFormater(): string
@@ -204,5 +239,13 @@ abstract class AbstractSearch implements SearchInterface
         $this->urlFormater = $urlFormater;
 
         return $this;
+    }
+
+    public function reset(): void
+    {
+        unset($this->availableSorts, $this->facets);
+
+        $this->availableSorts = [];
+        $this->facets = [];
     }
 }

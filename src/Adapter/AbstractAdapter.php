@@ -28,12 +28,17 @@ abstract class AbstractAdapter implements AdapterInterface
 
     abstract public function getFacetStatsKey(): string;
 
+    /**
+     * @param array<string, mixed> $results
+     *
+     * @return array{0: array<string, FacetTermDistribution>, 1: array<int, FacetStat>}
+     */
     protected function getFacets(array $results, SearchInterface $search, Query $query): array
     {
         $facetDistributionKey = $this->getFacetDistributionKey();
         $facetStatsKey = $this->getFacetStatsKey();
 
-        $mergedFacetDistribution = array_reduce($results['results'], function ($carry, $result) use ($facetDistributionKey) {
+        $mergedFacetDistribution = array_reduce($results['results'], static function ($carry, $result) use ($facetDistributionKey) {
             if (isset($result[$facetDistributionKey])) {
                 foreach ($result[$facetDistributionKey] as $facetKey => $facetValues) {
                     $carry[$facetKey] = $facetValues;
@@ -43,7 +48,7 @@ abstract class AbstractAdapter implements AdapterInterface
             return $carry;
         }, []);
 
-        $mergedFacetStats = array_reduce($results['results'], function ($carry, $result) use ($facetStatsKey) {
+        $mergedFacetStats = array_reduce($results['results'], static function ($carry, $result) use ($facetStatsKey) {
             if (isset($result[$facetStatsKey])) {
                 foreach ($result[$facetStatsKey] as $facetKey => $facetStat) {
                     $carry[$facetKey] = $facetStat;
@@ -65,41 +70,45 @@ abstract class AbstractAdapter implements AdapterInterface
         }
 
         foreach ($facetsDistributions as $property => $distribution) {
-            if ($distribution instanceof FacetTermDistribution) {
-                $values = $distribution->getValues();
-                $checkedValues = $distribution->getCheckedValues();
+            $values = $distribution->getValues();
+            $checkedValues = $distribution->getCheckedValues();
 
-                $checkedFacets = [];
-                $uncheckedFacets = [];
+            $checkedFacets = [];
+            $uncheckedFacets = [];
 
-                foreach ($values as $key => $value) {
-                    if (\in_array($key, $checkedValues)) {
-                        $checkedFacets[$key] = $value;
-                    } else {
-                        $uncheckedFacets[$key] = $value;
-                    }
+            foreach ($values as $key => $value) {
+                if (\in_array($key, $checkedValues)) {
+                    $checkedFacets[$key] = $value;
+                } else {
+                    $uncheckedFacets[$key] = $value;
                 }
-
-                $sortedFacets = $checkedFacets + $uncheckedFacets;
-
-                $distribution->setValues($sortedFacets);
             }
+
+            $sortedFacets = $checkedFacets + $uncheckedFacets;
+
+            $distribution->setValues($sortedFacets);
         }
 
         $facetStats = [];
         foreach ($mergedFacetStats as $property => $values) {
+            $userMin = null;
+            $userMax = null;
+
             $filter = $query->getActiveFilter($property);
             if ($filter instanceof RangeFilter) {
                 $userMin = $filter->getMin();
                 $userMax = $filter->getMax();
             }
 
-            $facetStats[] = new FacetStat($property, $values['min'], $values['max'], $userMin ?? null, $userMax ?? null);
+            $facetStats[] = new FacetStat($property, $values['min'], $values['max'], $userMin, $userMax);
         }
 
         return [$facetsDistributions, $facetStats];
     }
 
+    /**
+     * @param array<string, array<mixed, int>> $mergedFacetDistribution
+     */
     protected function hydrateTermDistribution(array $mergedFacetDistribution, Facet $facet, ?FilterInterface $filter): FacetTermDistribution
     {
         $values = $mergedFacetDistribution[$facet->getProperty()] ?? [];

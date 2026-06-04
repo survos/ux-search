@@ -45,7 +45,7 @@ class MezcalitoUxSearchBundle extends AbstractBundle
                     ->arrayPrototype()
                         ->beforeNormalization()
                             ->ifString()
-                            ->then(fn (string $v): array => ['dsn' => $v])
+                            ->then(static fn (string $v): array => ['dsn' => $v])
                         ->end()
                         ->children()
                             ->scalarNode('dsn')->isRequired()->end()
@@ -56,6 +56,9 @@ class MezcalitoUxSearchBundle extends AbstractBundle
         ;
     }
 
+    /**
+     * @param array<string, mixed> $config
+     */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
         $container->import('../config/services.php');
@@ -70,6 +73,7 @@ class MezcalitoUxSearchBundle extends AbstractBundle
             }
 
             $definition->addTag('mezcalito_ux_search.search', $tagAttributes);
+            $definition->addTag('kernel.reset', ['method' => 'reset']);
         });
 
         $builder->registerForAutoconfiguration(AdapterFactoryInterface::class)->addTag('mezcalito_ux_search.adapter_factory');

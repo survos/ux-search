@@ -23,6 +23,8 @@ use Mezcalito\UxSearchBundle\Search\Url\CurrentRequest;
 use Mezcalito\UxSearchBundle\Search\Url\UrlFormaterInterface;
 use Mezcalito\UxSearchBundle\Search\Url\UrlFormaterProvider;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\UX\LiveComponent\Attribute\LiveAction;
 use Symfony\UX\LiveComponent\Attribute\LiveArg;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
@@ -46,6 +48,9 @@ class Layout
     #[LiveProp]
     public ?string $name = null;
 
+    /**
+     * @var array<string, mixed>
+     */
     #[LiveProp]
     public array $options = [];
 
@@ -59,18 +64,27 @@ class Layout
         private readonly Searcher $searcher,
         private readonly RequestStack $requestStack,
         private readonly UrlFormaterProvider $urlFormaterProvider,
+        /** @var Serializer */
+        private readonly SerializerInterface $serializer,
     ) {
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     #[PreMount]
     public function onInitialMount(array $data): void
     {
         $this->search = $this->getSearch($data['name'])->create($data['options'] ?? []);
         $this->query = $this->getSearch($data['name'])->createQuery();
-        $this->currentRequest = CurrentRequest::fromRequest($this->requestStack->getMainRequest());
 
         if ($this->search->hasUrlRewriting()) {
-            $this->getUrlFormater()->applyFilters($this->currentRequest, $this->search, $this->query);
+            $mainRequest = $this->requestStack->getMainRequest();
+
+            if ($mainRequest && $mainRequest->attributes->has('_route')) {
+                $this->currentRequest = CurrentRequest::fromRequest($mainRequest);
+                $this->getUrlFormater()->applyFilters($this->currentRequest, $this->search, $this->query);
+            }
         }
 
         $this->searcher->search($this->query, $this->search);
@@ -82,7 +96,9 @@ class Layout
         $this->search = $this->getSearch($this->name)->create($this->options);
         $this->searcher->search($this->query, $this->search);
 
-        if ($this->search->hasUrlRewriting()) {
+        $this->dispatchBrowserEvent('ux-search:query:update', $this->serializer->normalize($this->query));
+
+        if ($this->search->hasUrlRewriting() && $this->currentRequest) {
             $this->dispatchBrowserEvent('ux-search:url:update', [
                 'url' => $this->getUrlFormater()->generateUrl($this->currentRequest, $this->search, $this->query),
             ]);
@@ -97,6 +113,29 @@ class Layout
 
     public function resetCurrentPage(string|int|null $previousValue): void
     {
+        $this->query->setCurrentPage(1);
+    }
+
+    #[LiveAction]
+    public function switchFacetTerm(#[LiveArg] string $property, #[LiveArg] string $value): void
+    {
+        $filter = $this->query->getActiveFilter($property);
+
+        if (!$filter instanceof TermFilter) {
+            $filter = new TermFilter($property);
+            $this->query->addActiveFilter($filter);
+        }
+
+        if ($filter->hasValue($value)) {
+            $filter->setValues([]);
+        } else {
+            $filter->setValues([$value]);
+        }
+
+        if (!$filter->hasValues()) {
+            $this->query->removeActiveFilter($filter);
+        }
+
         $this->query->setCurrentPage(1);
     }
 

@@ -19,14 +19,14 @@ class Query
 {
     private string $queryString = '';
 
-    /** @var FilterInterface[] */
+    /** @var array<string, FilterInterface> */
     private array $activeFilters = [];
 
     private int $currentPage = 1;
 
     private ?string $activeSort = null;
 
-    private ?int $activeHitsPerPage = 12;
+    private int $activeHitsPerPage = 12;
 
     public function getQueryString(): string
     {
@@ -40,39 +40,42 @@ class Query
         return $this;
     }
 
+    /**
+     * @return array<string, FilterInterface>
+     */
     public function getActiveFilters(): array
     {
         return $this->activeFilters;
     }
 
+    /**
+     * @param FilterInterface[] $activeFilters
+     */
     public function setActiveFilters(array $activeFilters): static
     {
-        $this->activeFilters = $activeFilters;
+        $this->activeFilters = [];
+        foreach ($activeFilters as $filter) {
+            $this->activeFilters[$filter->getProperty()] = $filter;
+        }
 
         return $this;
     }
 
     public function getActiveFilter(string $property): ?FilterInterface
     {
-        foreach ($this->activeFilters as $activeFilter) {
-            if ($activeFilter->getProperty() === $property) {
-                return $activeFilter;
-            }
-        }
-
-        return null;
+        return $this->activeFilters[$property] ?? null;
     }
 
     public function addActiveFilter(FilterInterface $filter): static
     {
-        $this->activeFilters[] = $filter;
+        $this->activeFilters[$filter->getProperty()] = $filter;
 
         return $this;
     }
 
     public function hasActiveFilter(string $property): bool
     {
-        return $this->getActiveFilter($property) instanceof FilterInterface;
+        return isset($this->activeFilters[$property]);
     }
 
     public function getCurrentPage(): int
@@ -113,6 +116,6 @@ class Query
 
     public function removeActiveFilter(FilterInterface $filter): void
     {
-        $this->activeFilters = array_filter($this->activeFilters, fn (FilterInterface $activeFilter) => $activeFilter !== $filter);
+        unset($this->activeFilters[$filter->getProperty()]);
     }
 }

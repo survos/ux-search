@@ -69,7 +69,7 @@ readonly class QueryBuilderHelper
         $this->updateQueryBuilderAssociations($qb, $alias);
 
         $qb
-            ->select(\sprintf('%s.%s as value, count(%s.%s) AS total', $alias, $property, $alias, $property))
+            ->select(\sprintf('%s.%s as value, count(DISTINCT %s) AS total', $alias, $property, $this->getIdentifierField()))
             ->orderBy('total', 'desc')
             ->groupBy(\sprintf('%s.%s', $alias, $property))
             ->setMaxResults($this->search->getResolvedAdapterParameter(DoctrineAdapter::MAX_FACET_VALUES_PARAM));
@@ -112,33 +112,45 @@ readonly class QueryBuilderHelper
 
     private function createBaseQueryBuilder(): QueryBuilder
     {
-        $qb = $this->manager
-            ->getRepository($this->search->getIndexName())
-            ->createQueryBuilder($this->search->getResolvedAdapterParameter(DoctrineAdapter::QUERY_BUILDER_ALIAS));
+        $repository = $this->manager->getRepository($this->search->getIndexName()); // @phpstan-ignore argument.templateType
+        $qb = $repository->createQueryBuilder($this->search->getResolvedAdapterParameter(DoctrineAdapter::QUERY_BUILDER_ALIAS));
 
         $this->search->getResolvedAdapterParameter(DoctrineAdapter::QUERY_BUILDER)($qb);
 
         return $qb;
     }
 
+    /**
+     * Extracts alias and property from a dot-notation property string.
+     *
+     * If the property contains a dot (e.g., "category.name"), it returns the parts as [alias, property].
+     * Otherwise, it assumes the default alias 'o' is used (matching the QUERY_BUILDER_ALIAS parameter default).
+     *
+     * Note: This assumes the QUERY_BUILDER_ALIAS is 'o' when no alias is specified in the property.
+     * If a custom alias is configured, properties must use dot notation (e.g., "customAlias.property").
+     *
+     * @return array{0: string, 1: string}
+     */
     private function extractAliasAndProperty(string $property): array
     {
         if (str_contains($property, '.')) {
             return explode('.', $property);
         }
 
-        return ['o', $property];
+        return [$this->search->getResolvedAdapterParameter(DoctrineAdapter::QUERY_BUILDER_ALIAS), $property];
     }
 
     private function updateQueryBuilderAssociations(QueryBuilder $qb, string $alias): void
     {
-        if ('o' === $alias) {
+        $baseAlias = $this->search->getResolvedAdapterParameter(DoctrineAdapter::QUERY_BUILDER_ALIAS);
+
+        if ($baseAlias === $alias) {
             return;
         }
 
         $metadata = $this->manager->getClassMetadata($this->search->getIndexName());
         if (\array_key_exists($alias, $metadata->associationMappings) && !\in_array($alias, $qb->getAllAliases(), true)) {
-            $qb->leftJoin('o.'.$alias, $alias);
+            $qb->leftJoin($baseAlias.'.'.$alias, $alias);
         }
     }
 
@@ -152,7 +164,7 @@ readonly class QueryBuilderHelper
         );
     }
 
-    private function applyFilter(QueryBuilder $qb, FilterInterface $filter)
+    private function applyFilter(QueryBuilder $qb, FilterInterface $filter): void
     {
         [$alias, $property] = $this->extractAliasAndProperty($filter->getProperty());
         $this->updateQueryBuilderAssociations($qb, $alias);
@@ -164,13 +176,13 @@ readonly class QueryBuilderHelper
             $qb->setParameter($parameterName, array_values($filter->getValues()));
         }
 
-        if ($filter instanceof RangeFilter && $filter->getMax()) {
+        if ($filter instanceof RangeFilter && null !== $filter->getMax()) {
             $parameterName = u(\sprintf('%s_%s_max', $alias, $property))->snake()->toString();
             $qb->andWhere(\sprintf('%s.%s <= :%s ', $alias, $property, $parameterName));
             $qb->setParameter($parameterName, $filter->getMax());
         }
 
-        if ($filter instanceof RangeFilter && $filter->getMin()) {
+        if ($filter instanceof RangeFilter && null !== $filter->getMin()) {
             $parameterName = u(\sprintf('%s_%s_min', $alias, $property))->snake()->toString();
             $qb->andWhere(\sprintf('%s.%s >= :%s', $alias, $property, $parameterName));
             $qb->setParameter($parameterName, $filter->getMin());
@@ -186,13 +198,31 @@ readonly class QueryBuilderHelper
 
     private function applySort(QueryBuilder $qb): void
     {
-        if ($this->query->getActiveSort()) {
-            [$sort, $order] = explode(':', $this->query->getActiveSort());
-            $qb->orderBy($sort, $order);
+        if (!$this->query->getActiveSort()) {
+            return;
         }
+
+        $activeSort = $this->query->getActiveSort();
+        $allowedSorts = array_map(static fn ($sort) => $sort->getKey(), $this->search->getAvailableSorts());
+
+        if (!\in_array($activeSort, $allowedSorts, true)) {
+            return;
+        }
+
+        if (!str_contains($activeSort, ':')) {
+            return;
+        }
+
+        [$sort, $order] = explode(':', $activeSort, 2);
+
+        if (!\in_array(strtoupper($order), ['ASC', 'DESC'], true)) {
+            return;
+        }
+
+        $qb->orderBy($sort, $order);
     }
 
-    private function applyQueryString(QueryBuilder $qb)
+    private function applyQueryString(QueryBuilder $qb): void
     {
         $fields = $this->search->getResolvedAdapterParameter(DoctrineAdapter::SEARCH_FIELDS);
         if ('' === $this->query->getQueryString() || 0 === \count($fields)) {
@@ -204,7 +234,7 @@ readonly class QueryBuilderHelper
             $orX->add(\sprintf('%s like :queryString', $fieldName));
         }
 
-        $qb->add('where', $orX);
+        $qb->andWhere($orX);
 
         $qb->setParameter('queryString', \sprintf('%%%s%%', $this->query->getQueryString()));
     }

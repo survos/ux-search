@@ -65,15 +65,22 @@ class DefaultUrlFormater implements UrlFormaterInterface
     public function applyFilters(CurrentRequest $currentRequest, SearchInterface $search, Query $query): void
     {
         if ($q = $currentRequest->parameters[self::QUERY] ?? null) {
-            $query->setQueryString($q);
+            $sanitizedQuery = mb_substr((string) $q, 0, 1000);
+            $query->setQueryString($sanitizedQuery);
         }
 
         if ($s = $currentRequest->parameters[self::SORT_BY] ?? null) {
-            $query->setActiveSort($s);
+            $availableSorts = $search->getAvailableSorts();
+            if (isset($availableSorts[(string) $s])) {
+                $query->setActiveSort((string) $s);
+            }
         }
 
         if ($p = $currentRequest->parameters[self::PAGE] ?? null) {
-            $query->setCurrentPage((int) $p);
+            $pageNumber = (int) $p;
+            if ($pageNumber >= 1) {
+                $query->setCurrentPage($pageNumber);
+            }
         }
 
         foreach ($search->getFacets() as $facet) {
@@ -81,28 +88,46 @@ class DefaultUrlFormater implements UrlFormaterInterface
             $propertyInUrl = str_replace('.', '_', $property);
 
             if ($value = $currentRequest->parameters[$propertyInUrl] ?? null) {
-                $query->addActiveFilter(new TermFilter($property, explode('~~', (string) $value)));
+                $values = explode('~~', (string) $value);
+                $values = array_filter($values, static fn ($v) => '' !== trim((string) $v));
+                $values = \array_slice($values, 0, 100);
+
+                if ([] !== $values) {
+                    $query->addActiveFilter(new TermFilter($property, $values));
+                }
             }
 
             $minValue = $currentRequest->parameters[$propertyInUrl.'Min'] ?? null;
             $maxValue = $currentRequest->parameters[$propertyInUrl.'Max'] ?? null;
             if ($minValue || $maxValue) {
-                $query->addActiveFilter(new RangeFilter(
-                    $property,
-                    null !== $minValue ? (float) $minValue : null,
-                    null !== $maxValue ? (float) $maxValue : null
-                ));
+                $min = null !== $minValue ? (float) $minValue : null;
+                $max = null !== $maxValue ? (float) $maxValue : null;
+
+                if (
+                    (null === $min || is_finite($min)) && (null === $max || is_finite($max))
+                    && (null === $min || null === $max || $min <= $max)
+                ) {
+                    $query->addActiveFilter(new RangeFilter($property, $min, $max));
+                }
             }
         }
     }
 
+    /**
+     * @param array<string, mixed> $params
+     *
+     * @return array<string, mixed>
+     */
     private function clearParameters(array $params, SearchInterface $search): array
     {
         $searchableParameterKeys = $this->getSearchableParameterKeys($search);
 
-        return array_filter($params, fn ($key) => !\in_array($key, $searchableParameterKeys), \ARRAY_FILTER_USE_KEY);
+        return array_filter($params, static fn ($key) => !\in_array($key, $searchableParameterKeys), \ARRAY_FILTER_USE_KEY);
     }
 
+    /**
+     * @return string[]
+     */
     private function getSearchableParameterKeys(SearchInterface $search): array
     {
         $keys = [self::PAGE, self::SORT_BY];

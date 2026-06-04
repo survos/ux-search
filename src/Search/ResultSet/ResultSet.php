@@ -22,13 +22,13 @@ class ResultSet
     /** @var Hit[] */
     private array $hits = [];
 
-    public int $totalResults = 0;
+    private int $totalResults = 0;
 
-    /** @var FacetTermDistribution[] */
-    public array $facetDistributions = [];
+    /** @var array<string, FacetTermDistribution> */
+    private array $facetDistributions = [];
 
-    /** @var FacetStat[] */
-    public array $facetStats = [];
+    /** @var array<string, FacetStat> */
+    private array $facetStats = [];
 
     public function getIndexUid(): ?string
     {
@@ -42,11 +42,17 @@ class ResultSet
         return $this;
     }
 
+    /**
+     * @return Hit[]
+     */
     public function getHits(): array
     {
         return $this->hits;
     }
 
+    /**
+     * @param Hit[] $hits
+     */
     public function setHits(array $hits): static
     {
         $this->hits = $hits;
@@ -66,49 +72,63 @@ class ResultSet
         return $this;
     }
 
+    /**
+     * @return array<string, FacetTermDistribution>
+     */
     public function getFacetDistributions(): array
     {
         return $this->facetDistributions;
     }
 
+    /**
+     * @param FacetTermDistribution[] $facetDistributions
+     */
     public function setFacetDistributions(array $facetDistributions): static
     {
-        $this->facetDistributions = $facetDistributions;
+        $this->facetDistributions = [];
+        foreach ($facetDistributions as $facetDistribution) {
+            $this->facetDistributions[$facetDistribution->getProperty()] = $facetDistribution;
+        }
 
         return $this;
     }
 
     public function getFacetDistribution(string $property): FacetTermDistribution
     {
-        foreach ($this->facetDistributions as $facetDistribution) {
-            if ($facetDistribution->getProperty() === $property) {
-                return $facetDistribution;
-            }
+        if (!isset($this->facetDistributions[$property])) {
+            throw ResultSetException::facetDistributionNotFound($property);
         }
 
-        throw ResultSetException::facetDistributionNotFound($property);
+        return $this->facetDistributions[$property];
     }
 
+    /**
+     * @return array<string, FacetStat>
+     */
     public function getFacetStats(): array
     {
         return $this->facetStats;
     }
 
+    /**
+     * @param FacetStat[] $facetStats
+     */
     public function setFacetStats(array $facetStats): static
     {
-        $this->facetStats = $facetStats;
+        $this->facetStats = [];
+        foreach ($facetStats as $facetStat) {
+            $this->facetStats[$facetStat->getProperty()] = $facetStat;
+        }
 
         return $this;
     }
 
     public function getFacetStat(string $property): FacetStat
     {
-        foreach ($this->facetStats as $facetStat) {
-            if ($facetStat->getProperty() === $property) {
-                return $facetStat;
-            }
+        if (!isset($this->facetStats[$property])) {
+            throw ResultSetException::facetStatNotFound($property);
         }
 
-        throw ResultSetException::facetStatNotFound($property);
+        return $this->facetStats[$property];
     }
 }

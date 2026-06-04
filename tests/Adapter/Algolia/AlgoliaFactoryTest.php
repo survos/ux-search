@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace Mezcalito\UxSearchBundle\Tests\Adapter\Algolia;
 
-use Algolia\AlgoliaSearch\SearchClient;
+use Algolia\AlgoliaSearch\Api\SearchClient;
 use Mezcalito\UxSearchBundle\Adapter\Algolia\AlgoliaAdapter;
 use Mezcalito\UxSearchBundle\Adapter\Algolia\AlgoliaFactory;
 use PHPUnit\Framework\TestCase;
@@ -34,7 +34,7 @@ class AlgoliaFactoryTest extends TestCase
             ->onlyMethods(['createClient'])
             ->getMock();
 
-        $client = $this->createMock(SearchClient::class);
+        $client = $this->createStub(SearchClient::class);
         $factory->expects($this->once())
             ->method('createClient')
             ->with('algolia://secret@index')

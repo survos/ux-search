@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Mezcalito\UxSearchBundle\Adapter\Meilisearch;
 
 use Meilisearch\Contracts\SearchQuery;
+use Mezcalito\UxSearchBundle\Exception\UnsupportedFilterException;
 use Mezcalito\UxSearchBundle\Search\Filter\FilterInterface;
 use Mezcalito\UxSearchBundle\Search\Filter\RangeFilter;
 use Mezcalito\UxSearchBundle\Search\Filter\TermFilter;
@@ -22,6 +23,9 @@ use Mezcalito\UxSearchBundle\Search\SearchInterface;
 
 class QueryBuilder
 {
+    /**
+     * @return array<int, SearchQuery>
+     */
     public function build(Query $query, SearchInterface $search): array
     {
         $options = $search->getResolvedAdapterParameters();
@@ -55,6 +59,10 @@ class QueryBuilder
             ->setHighlightPostTag($options['highlightPostTag'])
         ;
 
+        if ($options['distinct']) {
+            $meilisearchQuery->setDistinct($options['distinct']);
+        }
+
         if ([] !== $displayedFacets) {
             $meilisearchQuery->setFacets($displayedFacets);
         }
@@ -84,6 +92,8 @@ class QueryBuilder
 
     /**
      * @param FilterInterface[] $filters
+     *
+     * @return array<int, array<int, string>|string>
      */
     private function formatFilters(array $filters): array
     {
@@ -99,17 +109,17 @@ class QueryBuilder
                     $formated[] = $or;
                     break;
                 case RangeFilter::class:
-                    if ($filter->getMin()) {
-                        $formated[] = \sprintf('%s >= %d', $filter->getProperty(), $filter->getMin());
+                    if (null !== $filter->getMin()) {
+                        $formated[] = \sprintf('%s >= %s', $filter->getProperty(), $filter->getMin());
                     }
 
-                    if ($filter->getMax()) {
-                        $formated[] = \sprintf('%s <= %d', $filter->getProperty(), $filter->getMax());
+                    if (null !== $filter->getMax()) {
+                        $formated[] = \sprintf('%s <= %s', $filter->getProperty(), $filter->getMax());
                     }
 
                     break;
                 default:
-                    throw new \Exception(\sprintf('Facet filter "%s" not supported', $filter::class));
+                    throw UnsupportedFilterException::filterNotSupported($filter::class);
             }
         }
 
