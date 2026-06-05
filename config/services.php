@@ -42,7 +42,8 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\UX\LiveComponent\LiveResponder;
 
 return static function (ContainerConfigurator $container) {
-    $container->services()
+    $services = $container->services();
+    $services
         ->set(DoctrineFactory::class)
             ->arg('$managerRegistry', service(ManagerRegistry::class)->nullOnInvalid())
             ->tag('mezcalito_ux_search.adapter_factory')
@@ -126,7 +127,13 @@ return static function (ContainerConfigurator $container) {
         ->set(DefaultUrlFormater::class)
             ->arg('$urlGenerator', service(UrlGeneratorInterface::class))
             ->tag('mezcalito_ux_search.url_formater')
-        ->set('maker.maker.make_search', MakeSearch::class)
-            ->tag('maker.command')
     ;
+
+    // The maker command is optional: only register it when MakerBundle is
+    // installed, otherwise autoloading MakeSearch (extends AbstractMaker) fatals
+    // during container compilation. See Mezcalito/ux-search#47.
+    if (class_exists(\Symfony\Bundle\MakerBundle\Maker\AbstractMaker::class)) {
+        $services->set('maker.maker.make_search', MakeSearch::class)
+            ->tag('maker.command');
+    }
 };
