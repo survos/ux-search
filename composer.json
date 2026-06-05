@@ -1,8 +1,16 @@
 {
-  "name": "mezcalito/ux-search",
+  "name": "tacman/ux-search",
   "type": "symfony-bundle",
-  "description": "Effortless search and faceted search with Symfony UX and Mezcalito UX Search",
-  "homepage": "https://github.com/Mezcalito/ux-search",
+  "description": "TEMPORARY soft-fork of mezcalito/ux-search (unchanged Mezcalito\\ namespace) carrying patches survos/search-bundle needs. Remove once Mezcalito/ux-search PRs #49 and #50 are merged and released.",
+  "homepage": "https://github.com/tacman/ux-search",
+  "replace": {
+    "mezcalito/ux-search": "self.version"
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-0.x": "0.6.x-dev"
+    }
+  },
   "keywords": [
     "symfony-ux", "listing", "search", "meilisearch", "faceted search"
   ],

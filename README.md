@@ -1,4 +1,17 @@
-# Mezcalito UX Search
+# Mezcalito UX Search — `tacman/ux-search` soft-fork
+
+> [!WARNING]
+> **This is a temporary soft-fork of [`mezcalito/ux-search`](https://github.com/Mezcalito/ux-search).**
+> It is published as `tacman/ux-search` and `replace`s `mezcalito/ux-search`, but
+> keeps the original `Mezcalito\UxSearchBundle` namespace — there are no code/import
+> changes. It exists only to carry patches that `survos/search-bundle` depends on
+> while they are in review upstream:
+> [Mezcalito/ux-search#49](https://github.com/Mezcalito/ux-search/pull/49) and
+> [#50](https://github.com/Mezcalito/ux-search/pull/50).
+> **When those are merged and released, this fork will be marked abandoned in favor
+> of the upstream package.** Depend on `mezcalito/ux-search` directly unless you
+> specifically need those patches.
+
 
 [![Latest Version](https://img.shields.io/packagist/v/mezcalito/ux-search.svg)](https://packagist.org/packages/mezcalito/ux-search)
 [![License](https://img.shields.io/packagist/l/mezcalito/ux-search.svg)](https://github.com/mezcalito/ux-search/blob/main/LICENSE)
