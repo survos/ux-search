@@ -15,6 +15,7 @@ namespace Mezcalito\UxSearchBundle\Twig\Components;
 
 use Mezcalito\UxSearchBundle\Context\ContextProvider;
 use Mezcalito\UxSearchBundle\Search\ResultSet\ResultSet;
+use Mezcalito\UxSearchBundle\Search\SearchInterface;
 use Symfony\UX\TwigComponent\Attribute\ExposeInTemplate;
 
 class Hits
@@ -28,5 +29,16 @@ class Hits
     public function getResults(): ResultSet
     {
         return $this->contextProvider->getCurrentContext()->getResults();
+    }
+
+    /**
+     * Exposes the active search to the template so hit rendering can branch on it
+     * (e.g. a per-search hit template) instead of overriding Hits.html.twig globally.
+     * See Mezcalito/ux-search#13.
+     */
+    #[ExposeInTemplate]
+    public function getSearch(): SearchInterface
+    {
+        return $this->contextProvider->getCurrentContext()->getSearch();
     }
 }

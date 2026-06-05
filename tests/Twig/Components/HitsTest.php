@@ -16,6 +16,7 @@ namespace Mezcalito\UxSearchBundle\Tests\Twig\Components;
 use Mezcalito\UxSearchBundle\Context\Context;
 use Mezcalito\UxSearchBundle\Search\ResultSet\Hit;
 use Mezcalito\UxSearchBundle\Search\ResultSet\ResultSet;
+use Mezcalito\UxSearchBundle\Search\SearchInterface;
 use Mezcalito\UxSearchBundle\Twig\Components\Hits;
 use Symfony\UX\TwigComponent\Test\InteractsWithTwigComponents;
 
@@ -36,6 +37,7 @@ class HitsTest extends AbstractComponentTestCase
                 'name' => 'Result 2',
             ], 1.0),
         ]));
+        $context->setSearch($this->createStub(SearchInterface::class));
         $this->setCurrentContext($context);
 
         $rendered = $this->renderTwigComponent(
@@ -50,6 +52,7 @@ class HitsTest extends AbstractComponentTestCase
     {
         $context = new Context();
         $context->setResults((new ResultSet())->setHits([]));
+        $context->setSearch($this->createStub(SearchInterface::class));
         $this->setCurrentContext($context);
 
         $rendered = $this->renderTwigComponent(
