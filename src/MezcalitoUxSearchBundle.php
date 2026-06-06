@@ -104,7 +104,7 @@ class MezcalitoUxSearchBundle extends AbstractBundle
             $builder->prependExtensionConfig('framework', [
                 'asset_mapper' => [
                     'paths' => [
-                        __DIR__.'/../assets/dist' => '@mezcalito/ux-search',
+                        __DIR__.'/../assets/dist' => '@tacman/ux-search',
                     ],
                 ],
             ]);
