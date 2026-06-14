@@ -16,6 +16,7 @@ namespace Mezcalito\UxSearchBundle\Adapter\Doctrine;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\Tools\Pagination\Paginator;
+use Doctrine\Persistence\ManagerRegistry;
 use Mezcalito\UxSearchBundle\Adapter\AdapterInterface;
 use Mezcalito\UxSearchBundle\Search\Facet;
 use Mezcalito\UxSearchBundle\Search\Filter\RangeFilter;
@@ -59,13 +60,35 @@ readonly class DoctrineAdapter implements AdapterInterface
      */
     public const string FETCH_JOIN_COLLECTION = 'fetchJoinCollection';
 
-    public function __construct(private EntityManagerInterface $manager)
+    public function __construct(
+        private EntityManagerInterface $manager,
+        private ?ManagerRegistry $managerRegistry = null,
+    ) {
+    }
+
+    /**
+     * Resolve the manager that actually maps the searched entity. With multiple
+     * entity managers, the DSN-named manager (e.g. doctrine://default) does not
+     * know entities mapped on another EM, so query/metadata calls throw
+     * "class … not found in the chain configured namespaces". Fall back to the
+     * DSN manager when the registry can't resolve one (no registry, non-ORM, etc.).
+     */
+    private function managerFor(SearchInterface $search): EntityManagerInterface
     {
+        $indexName = $search->getIndexName();
+        if ($this->managerRegistry !== null && is_string($indexName) && class_exists($indexName)) {
+            $resolved = $this->managerRegistry->getManagerForClass($indexName);
+            if ($resolved instanceof EntityManagerInterface) {
+                return $resolved;
+            }
+        }
+
+        return $this->manager;
     }
 
     public function search(Query $query, SearchInterface $search): ResultSet
     {
-        $helper = new QueryBuilderHelper($this->manager, $query, $search);
+        $helper = new QueryBuilderHelper($this->managerFor($search), $query, $search);
 
         $paginator = new Paginator(
             $helper->getResultsQuery()->getQuery(),
@@ -112,7 +135,7 @@ readonly class DoctrineAdapter implements AdapterInterface
     {
         $distributions = [];
 
-        $helper = new QueryBuilderHelper($this->manager, $query, $search);
+        $helper = new QueryBuilderHelper($this->managerFor($search), $query, $search);
 
         foreach ($search->getFacets() as $facet) {
             // Range facets render from min/max stats only; skip the term-distribution
@@ -173,7 +196,7 @@ readonly class DoctrineAdapter implements AdapterInterface
     {
         $stats = [];
 
-        $helper = new QueryBuilderHelper($this->manager, $query, $search);
+        $helper = new QueryBuilderHelper($this->managerFor($search), $query, $search);
 
         foreach ($search->getFacets() as $facet) {
             // Only range facets consume stats; list facets never do, so skip the

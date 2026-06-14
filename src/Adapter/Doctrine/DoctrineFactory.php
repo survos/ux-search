@@ -45,6 +45,8 @@ readonly class DoctrineFactory implements AdapterFactoryInterface
             throw DoctrineAdapterException::isNotOrmManager($managerName);
         }
 
-        return new DoctrineAdapter($manager);
+        // Pass the registry so the adapter can resolve the manager that actually
+        // maps each searched entity (multi-EM), falling back to $manager.
+        return new DoctrineAdapter($manager, $this->managerRegistry);
     }
 }
