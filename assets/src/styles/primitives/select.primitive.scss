@@ -6,6 +6,7 @@
   color: var(--ux-search-color-text);
 
   select {
+    /*
     -webkit-appearance: none;
     -moz-appearance: none;
     position: relative;
@@ -27,6 +28,7 @@
     &:focus {
       outline-color: var(--ux-search-color-accent);
     }
+    */
 
     option {
       background: var(--ux-search-color-background);
@@ -34,6 +36,7 @@
     }
   }
 
+  /*
   svg {
     position: absolute;
     top: 50%;
@@ -43,4 +46,5 @@
     height: 24px;
     pointer-events: none;
   }
+  */
 }

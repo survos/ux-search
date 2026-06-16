@@ -13,7 +13,7 @@
   align-items: center;
   flex-shrink: 0;
   font-size: 14px;
-  padding: 8px 12px;
+  padding: 10px 12px;
   background-color: var(--ux-search-color-secondary);
   color: var(--ux-search-color-secondary-text);
   border-radius: var(--ux-search-rounded-md);
@@ -36,8 +36,8 @@
   }
 
   svg {
-    width: 20px;
-    height: 20px;
+    width: 15px;
+    height: 15px;
   }
 
   &:after {

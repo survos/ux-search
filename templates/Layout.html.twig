@@ -11,12 +11,17 @@
                 {% endblock %}
             </div>
 
-            <div class="ux-search__toolbar">
+            <div class="ux-search__toolbar d-flex justify-content-between align-items-center flex-wrap gap-3">
                 {% block toolbar %}
-                    <twig:Mezcalito:UxSearch:CurrentRefinements/>
-                    <twig:Mezcalito:UxSearch:ClearRefinements />
-                    <twig:Mezcalito:UxSearch:HitsPerPage/>
-                    <twig:Mezcalito:UxSearch:SortBy/>
+                    <div class="d-flex align-items-end gap-2 flex-wrap">
+                        <twig:Mezcalito:UxSearch:CurrentRefinements />
+                        <twig:Mezcalito:UxSearch:ClearRefinements />
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <twig:Mezcalito:UxSearch:HitsPerPage />
+                        <twig:Mezcalito:UxSearch:SortBy />
+                    </div>
                 {% endblock %}
             </div>
 

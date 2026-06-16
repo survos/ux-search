@@ -1,10 +1,12 @@
 .ux-search-facet {
-  padding: 20px 16px;
+  padding: 0;
   margin: 0;
   border-radius: var(--ux-search-rounded-md);
   background-color: var(--ux-search-color-background);
   border: none;
   box-sizing: border-box;
+  border: 1px solid var(--ux-search-color-border);
+  box-shadow: none;
 }
 
 .ux-search-facet__title {
@@ -12,8 +14,10 @@
   width: 100%;
   float: left;
   font-weight: bold;
-  padding: 0;
-  margin-bottom: 12px;
+  padding: 12px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--ux-search-color-border);
+  font-size: 1rem;
 }
 
 .ux-search-range-input__form {

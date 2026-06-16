@@ -2,7 +2,7 @@
     {%- if activeFilters is defined and activeFilters|length > 0 %}
         <button
             {{ attributes.defaults({
-                'class': 'ux-search-clear-refinements ux-search-button',
+                'class': 'ux-search-clear-refinements ux-search-button btn',
                 'data-action': 'live#action:prevent',
                 'data-live-action-param': 'clearRefinements'
             }) }}

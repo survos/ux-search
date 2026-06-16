@@ -44,3 +44,12 @@
   user-select: none;
   pointer-events: none;
 }
+
+.ux-search-pagination .page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.25rem;
+    min-width: 2.25rem;
+    padding-inline: 8px;
+}
