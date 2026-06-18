@@ -10,15 +10,18 @@
 
 .ux-search__form {
   grid-column: 1 / -1;
-  margin-bottom: 24px;
+  margin-bottom: 0;
+  flex: 1;
 }
 
 .ux-search__toolbar {
   grid-column: 1 / -1;
   display: flex;
-  align-items: flex-start;
-  margin-bottom: 32px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 /*
@@ -42,7 +45,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-top: 30.5px;
+  margin-top: 0;
 }
 
 @media screen and (max-width: 768px) {
@@ -64,5 +67,19 @@
 .ux-search__stats {
   display: flex;
   justify-content: flex-end;
+  margin-bottom: 0;
+}
+
+.ux-search__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   margin-bottom: 12px;
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.ux-search-search-input {
+  margin-top: 28px;
 }
