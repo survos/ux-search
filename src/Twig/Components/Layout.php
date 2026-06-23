@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Mezcalito\UxSearchBundle\Twig\Components;
 
+use Mezcalito\UxSearchBundle\Context\ContextProvider;
 use Mezcalito\UxSearchBundle\Search\Filter\RangeFilter;
 use Mezcalito\UxSearchBundle\Search\Filter\TermFilter;
 use Mezcalito\UxSearchBundle\Search\Query;
@@ -54,6 +55,24 @@ class Layout
     #[LiveProp]
     public array $options = [];
 
+    /**
+     * Initial query state applied once when the component mounts.
+     *
+     * Supported keys: query/queryString, sort/activeSort, hitsPerPage/activeHitsPerPage, filters.
+     *
+     * @var array<string, mixed>
+     */
+    #[LiveProp]
+    public array $initialQuery = [];
+
+    /**
+     * Query filters applied to every search without becoming public/removable refinements.
+     *
+     * @var array<string, mixed>
+     */
+    #[LiveProp]
+    public array $fixedFilters = [];
+
     public ?SearchInterface $search = null;
 
     #[LiveProp(useSerializerForHydration: true)]
@@ -62,6 +81,7 @@ class Layout
     public function __construct(
         private readonly SearchProvider $searchConfigurationProvider,
         private readonly Searcher $searcher,
+        private readonly ContextProvider $contextProvider,
         private readonly RequestStack $requestStack,
         private readonly UrlFormaterProvider $urlFormaterProvider,
         /** @var Serializer */
@@ -75,8 +95,12 @@ class Layout
     #[PreMount]
     public function onInitialMount(array $data): void
     {
-        $this->search = $this->getSearch($data['name'])->create($data['options'] ?? []);
+        $this->options = $data['options'] ?? [];
+        $this->initialQuery = $data['initialQuery'] ?? [];
+        $this->fixedFilters = $data['fixedFilters'] ?? [];
+        $this->search = $this->getSearch($data['name'])->create($this->options);
         $this->query = $this->getSearch($data['name'])->createQuery();
+        $this->applyInitialQuery($this->query, $this->initialQuery);
 
         if ($this->search->hasUrlRewriting()) {
             $mainRequest = $this->requestStack->getMainRequest();
@@ -87,14 +111,14 @@ class Layout
             }
         }
 
-        $this->searcher->search($this->query, $this->search);
+        $this->performSearch();
     }
 
     #[PreReRender]
     public function onReRender(): void
     {
         $this->search = $this->getSearch($this->name)->create($this->options);
-        $this->searcher->search($this->query, $this->search);
+        $this->performSearch();
 
         $this->dispatchBrowserEvent('ux-search:query:update', $this->serializer->normalize($this->query));
 
@@ -182,6 +206,85 @@ class Layout
     public function clearRefinements(): void
     {
         $this->query->setActiveFilters([]);
+    }
+
+    private function performSearch(): void
+    {
+        $publicQuery = clone $this->query;
+        $searchQuery = clone $this->query;
+        $this->applyFilters($searchQuery, $this->fixedFilters);
+
+        $this->searcher->search($searchQuery, $this->search);
+
+        if ($this->fixedFilters !== [] && $this->contextProvider->hasCurrentContext()) {
+            $this->contextProvider->getCurrentContext()->setQuery($publicQuery);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $initialQuery
+     */
+    private function applyInitialQuery(Query $query, array $initialQuery): void
+    {
+        $queryString = $initialQuery['queryString'] ?? $initialQuery['query'] ?? null;
+        if (is_scalar($queryString)) {
+            $query->setQueryString((string) $queryString);
+        }
+
+        $sort = $initialQuery['activeSort'] ?? $initialQuery['sort'] ?? null;
+        if (is_scalar($sort)) {
+            $query->setActiveSort((string) $sort);
+        }
+
+        $hitsPerPage = $initialQuery['activeHitsPerPage'] ?? $initialQuery['hitsPerPage'] ?? null;
+        if (is_numeric($hitsPerPage)) {
+            $query->setActiveHitsPerPage((int) $hitsPerPage);
+        }
+
+        $filters = $initialQuery['filters'] ?? null;
+        if (is_array($filters)) {
+            $this->applyFilters($query, $filters);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $filters
+     */
+    private function applyFilters(Query $query, array $filters): void
+    {
+        foreach ($filters as $property => $filter) {
+            if (!is_string($property) || $property === '') {
+                continue;
+            }
+
+            if (is_array($filter) && (array_key_exists('min', $filter) || array_key_exists('max', $filter))) {
+                $min = $this->numericOrNull($filter['min'] ?? null);
+                $max = $this->numericOrNull($filter['max'] ?? null);
+                if ($min !== null || $max !== null) {
+                    $query->addActiveFilter(new RangeFilter($property, $min, $max));
+                }
+
+                continue;
+            }
+
+            $values = is_array($filter) && array_key_exists('values', $filter) ? $filter['values'] : $filter;
+            $values = is_array($values) ? $values : [$values];
+            $values = array_values(array_filter($values, static fn (mixed $value): bool => is_scalar($value) && trim((string) $value) !== ''));
+            if ($values !== []) {
+                $query->addActiveFilter(new TermFilter($property, array_map('strval', $values)));
+            }
+        }
+    }
+
+    private function numericOrNull(mixed $value): int|float|null
+    {
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $number = $value + 0;
+
+        return is_int($number) || is_float($number) ? $number : null;
     }
 
     private function getSearch(string $name): SearchInterface

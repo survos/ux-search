@@ -64,6 +64,7 @@ return static function (ContainerConfigurator $container) {
         ->set(Layout::class)
             ->arg('$searchConfigurationProvider', service(SearchProvider::class))
             ->arg('$searcher', service(Searcher::class))
+            ->arg('$contextProvider', service(ContextProvider::class))
             ->arg('$requestStack', service(RequestStack::class))
             ->arg('$urlFormaterProvider', service(UrlFormaterProvider::class))
             ->arg('$serializer', service('serializer'))

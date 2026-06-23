@@ -14,6 +14,9 @@ declare(strict_types=1);
 namespace Mezcalito\UxSearchBundle\Tests\Twig\Components;
 
 use Mezcalito\UxSearchBundle\Search\AbstractSearch;
+use Mezcalito\UxSearchBundle\Context\ContextProvider;
+use Mezcalito\UxSearchBundle\Search\Filter\RangeFilter;
+use Mezcalito\UxSearchBundle\Search\Filter\TermFilter;
 use Mezcalito\UxSearchBundle\Search\Query;
 use Mezcalito\UxSearchBundle\Search\ResultSet\ResultSet;
 use Mezcalito\UxSearchBundle\Search\Searcher as BaseSearcher;
@@ -52,6 +55,58 @@ final class LayoutUrlRewritingTest extends TestCase
         }
     }
 
+
+    public function testInitialQuerySeedsPublicQueryState(): void
+    {
+        $layout = $this->createLayout(enabled: false);
+
+        $layout->onInitialMount([
+            'name' => 'listing',
+            'options' => [],
+            'initialQuery' => [
+                'query' => 'painting',
+                'sort' => 'title:desc',
+                'hitsPerPage' => 24,
+                'filters' => [
+                    'category' => 'object',
+                    'price' => ['min' => 10, 'max' => 20],
+                ],
+            ],
+        ]);
+
+        self::assertSame('painting', $layout->query->getQueryString());
+        self::assertSame('title:desc', $layout->query->getActiveSort());
+        self::assertSame(24, $layout->query->getActiveHitsPerPage());
+
+        $category = $layout->query->getActiveFilter('category');
+        self::assertInstanceOf(TermFilter::class, $category);
+        self::assertSame(['object'], $category->getValues());
+
+        $price = $layout->query->getActiveFilter('price');
+        self::assertInstanceOf(RangeFilter::class, $price);
+        self::assertSame(10, $price->getMin());
+        self::assertSame(20, $price->getMax());
+    }
+
+    public function testFixedFiltersConstrainSearchWithoutExposingRefinements(): void
+    {
+        $layout = $this->createLayout(enabled: false);
+
+        $layout->onInitialMount([
+            'name' => 'listing',
+            'options' => [],
+            'fixedFilters' => ['core' => 'obj'],
+        ]);
+
+        self::assertFalse($layout->query->hasActiveFilter('core'));
+
+        $searchedFilter = DummySearcherState::$lastQuery?->getActiveFilter('core');
+        self::assertInstanceOf(TermFilter::class, $searchedFilter);
+        self::assertSame(['obj'], $searchedFilter->getValues());
+
+        self::assertFalse($layout->contextProvider->getCurrentContext()->getQuery()->hasActiveFilter('core'));
+    }
+
     public function testDispatchesNamespacedEventWhenEnabled(): void
     {
         $layout = $this->createLayout(enabled: true);
@@ -86,6 +141,7 @@ final class LayoutUrlRewritingTest extends TestCase
         $provider = new SearchProvider(['listing' => $search]);
 
         $searcher = new DummySearcher();
+        $contextProvider = new ContextProvider();
 
         $request = new Request([], [], ['_route' => 'route']);
         $stack = new RequestStack();
@@ -107,8 +163,10 @@ final class LayoutUrlRewritingTest extends TestCase
         $encoders = [new JsonEncoder()];
 
         $serializer = new Serializer($normalizers, $encoders);
+        DummySearcherState::$lastQuery = null;
+        DummySearcherState::$contextProvider = $contextProvider;
 
-        return new TestableLayout($provider, $searcher, $stack, $urlFormaterProvider, $serializer);
+        return new TestableLayout($provider, $searcher, $contextProvider, $stack, $urlFormaterProvider, $serializer);
     }
 }
 
@@ -116,10 +174,28 @@ final class TestableLayout extends Layout
 {
     public array $dispatchedEvents = [];
 
+    public function __construct(
+        SearchProvider $searchConfigurationProvider,
+        DummySearcher $searcher,
+        public readonly ContextProvider $contextProvider,
+        RequestStack $requestStack,
+        UrlFormaterProvider $urlFormaterProvider,
+        Serializer $serializer,
+    ) {
+        parent::__construct($searchConfigurationProvider, $searcher, $contextProvider, $requestStack, $urlFormaterProvider, $serializer);
+    }
+
     public function dispatchBrowserEvent(string $event, array $data = []): void
     {
         $this->dispatchedEvents[] = [$event, $data];
     }
+}
+
+final class DummySearcherState
+{
+    public static ?Query $lastQuery = null;
+
+    public static ?ContextProvider $contextProvider = null;
 }
 
 readonly class DummySearcher extends BaseSearcher
@@ -130,6 +206,9 @@ readonly class DummySearcher extends BaseSearcher
 
     public function search(Query $query, SearchInterface $search): ResultSet
     {
+        DummySearcherState::$lastQuery = $query;
+        DummySearcherState::$contextProvider?->init($query, $search);
+
         return new ResultSet();
     }
 }
