@@ -31,12 +31,33 @@
                 </div>
             </div>
 
-            <div class="ux-search__facets">
-                {% block facets %}
+            <div
+                class="ux-search__facets offcanvas-md offcanvas-start"
+                tabindex="-1"
+                id="uxSearchFacets"
+            >
+                <div class="offcanvas-header">
+                    <h5 class="offcanvas-title fw-bold">
+                        Filters
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="offcanvas"
+                        data-bs-target="#uxSearchFacets"
+                    ></button>
+                </div>
+
+                <div class="offcanvas-body p-3">
                     {% for facet in search.facets %}
-                         <twig:Mezcalito:UxSearch:Facet :property="facet.property" />
+                        <twig:Mezcalito:UxSearch:Facet :property="facet.property" />
                     {% endfor %}
-                {% endblock %}
+                </div>
+
+                <div class="offcanvas-footer">
+                    <twig:Mezcalito:UxSearch:ClearRefinements />
+                </div>
             </div>
 
             <div class="ux-search__listing">
@@ -51,5 +72,16 @@
                 {% endblock %}
             </div>
         </div>
+
+        <button
+            type="button"
+            class="btn btn-primary btn-filter-offcanvas d-md-none"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#uxSearchFacets"
+            aria-controls="uxSearchFacets"
+        >
+            {{ ux_icon('tabler:adjustments-horizontal', { class: 'icon me-1' }) }}
+            Filters
+        </button>
     {% endblock %}
 </div>
