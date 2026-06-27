@@ -22,6 +22,10 @@ abstract class AbstractFacet
 {
     public string $property;
 
+    public bool $collapsible = true;
+
+    public bool $collapsed = false;
+
     public function __construct(protected ContextProvider $contextProvider)
     {
     }

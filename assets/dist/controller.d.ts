@@ -7,6 +7,7 @@ export default class extends Controller<HTMLElement> {
     connect(): void;
     private handleHistoryUpdate;
     updateFacetRange(event: SubmitEvent & ActionEvent): Promise<void>;
+    toggleFacetCollapse(event: Event): void;
     private getRangeValues;
     updateUrl(url: string): void;
     disconnect(): void;

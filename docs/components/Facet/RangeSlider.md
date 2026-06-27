@@ -2,6 +2,8 @@
 
 The `RangeSlider` component provides a user-friendly dual-handle range slider for filtering numeric values (e.g., price, rating, size). Users can drag handles to set minimum and maximum values.
 
+The facet header title and chevron toggle collapse by default. Use `collapsed` to render it closed initially, or `collapsible: false` to disable the toggle.
+
 ## Usage
 
 ```twig

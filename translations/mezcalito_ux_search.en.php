@@ -26,6 +26,9 @@ return [
     'facet' => [
         'search' => 'Search %facet%',
         'search_placeholder' => 'Search',
+        'no_search_results' => 'No search results',
+        'expand' => 'Expand %facet%',
+        'collapse' => 'Collapse %facet%',
         'sort' => 'Sort %facet%',
         'sort_options' => [
             'count_desc' => 'Most Results',

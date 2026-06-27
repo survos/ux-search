@@ -49,7 +49,13 @@ class RangeSliderTest extends AbstractComponentTestCase
         );
 
         // Label
-        $this->assertStringContainsString('<legend class="ux-search-facet__title">Price</legend>', $rendered->toString());
+        $this->assertStringContainsString('<span class="ux-search-facet__title-text">Price</span>', $rendered->toString());
+        $this->assertStringContainsString('data-ux-search-facet-toggle', $rendered->toString());
+        $this->assertStringContainsString('click-&gt;ux-search#toggleFacetCollapse', $rendered->toString());
+        $this->assertStringContainsString('class="ux-search-facet__collapse btn btn-action btn-sm"', $rendered->toString());
+        $this->assertStringContainsString('aria-expanded="true"', $rendered->toString());
+        $this->assertStringContainsString('data-action="ux-search#toggleFacetCollapse"', $rendered->toString());
+        $this->assertStringContainsString('class="card-body ux-search-facet__panel"', $rendered->toString());
 
         $this->assertStringContainsString('id="price-min"', $rendered->toString());
         $this->assertStringContainsString('id="price-max"', $rendered->toString());

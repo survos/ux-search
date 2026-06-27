@@ -20,6 +20,44 @@
   font-size: 1rem;
 }
 
+.ux-search-facet__title-group {
+  min-width: 0;
+}
+
+.ux-search-facet__title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &[role="button"] {
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: var(--tblr-focus-ring-width) solid var(--tblr-focus-ring-color);
+      outline-offset: var(--tblr-focus-ring-offset);
+      border-radius: var(--ux-search-rounded-sm);
+    }
+  }
+}
+
+.ux-search-facet__collapse {
+  flex-shrink: 0;
+  color: var(--ux-search-color-text-soft);
+  height: 18px;
+  width: 18px;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    transition: transform 0.15s ease;
+  }
+
+  [data-ux-search-facet-collapsed="true"] & svg {
+    transform: rotate(-90deg);
+  }
+}
+
 .ux-search-range-input__form {
   clear: both;
   display: grid;

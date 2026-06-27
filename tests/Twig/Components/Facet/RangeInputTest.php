@@ -49,7 +49,14 @@ class RangeInputTest extends AbstractComponentTestCase
         );
 
         // Label
-        $this->assertStringContainsString('<legend class="ux-search-facet__title">Price</legend>', $rendered->toString());
+        $this->assertStringContainsString('<span class="ux-search-facet__title-text">', $rendered->toString());
+        $this->assertStringContainsString('Price', $rendered->toString());
+        $this->assertStringContainsString('data-ux-search-facet-toggle', $rendered->toString());
+        $this->assertStringContainsString('click-&gt;ux-search#toggleFacetCollapse', $rendered->toString());
+        $this->assertStringContainsString('class="ux-search-facet__collapse btn btn-action btn-sm"', $rendered->toString());
+        $this->assertStringContainsString('aria-expanded="true"', $rendered->toString());
+        $this->assertStringContainsString('data-action="ux-search#toggleFacetCollapse"', $rendered->toString());
+        $this->assertStringContainsString('class="card-body ux-search-facet__panel"', $rendered->toString());
 
         $this->assertStringContainsString('id="price-min"', $rendered->toString());
         $this->assertStringContainsString('id="price-max"', $rendered->toString());
@@ -57,5 +64,31 @@ class RangeInputTest extends AbstractComponentTestCase
         $this->assertSame(2, substr_count($rendered->toString(), 'max="50"'));
         $this->assertStringContainsString('value="10"', $rendered->toString());
         $this->assertStringContainsString('value="20"', $rendered->toString());
+    }
+
+    public function testComponentCanRenderInitiallyCollapsed(): void
+    {
+        $search = $this->createStub(SearchInterface::class);
+        $search->method('getFacet')
+            ->willReturn(new Facet('price', 'Price', RangeInput::class, ['collapsed' => true]));
+
+        $context = new Context();
+        $context->setQuery(new Query());
+        $context->setSearch($search);
+        $context->setResults((new ResultSet())->setFacetStats([
+            new FacetStat('price', 0, 50),
+        ]));
+
+        $this->setCurrentContext($context);
+
+        $rendered = $this->renderTwigComponent(
+            name: RangeInput::class,
+            data: ['property' => 'price'],
+        );
+
+        $this->assertStringContainsString('data-ux-search-facet-collapsed="true"', $rendered->toString());
+        $this->assertStringContainsString('aria-expanded="false"', $rendered->toString());
+        $this->assertStringContainsString('id="price-facet-panel"', $rendered->toString());
+        $this->assertStringContainsString('hidden', $rendered->toString());
     }
 }

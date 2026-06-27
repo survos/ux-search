@@ -27,6 +27,8 @@ The property is automatically determined when using the generic Facet component:
 | `limit`                         | int                   | Number of items to display before "show more"       |
 | `searchable`                    | bool                  | Whether to show a local search input when values exceed `limit` |
 | `valueType`                     | ?string               | Value type for sorting: `string`, `number`, `date`, or auto-detected |
+| `collapsible`                   | bool                  | Whether the header title and chevron collapse the facet body |
+| `collapsed`                     | bool                  | Whether the facet body starts collapsed                         |
 | `attributes`                    | ComponentAttributes   | HTML attributes for the container                   |
 
 ## Blocks Available
@@ -37,7 +39,7 @@ The property is automatically determined when using the generic Facet component:
 | `sort`      | Sort dropdown - override to customize local facet value sorting          |
 | `search`    | Search input - override to customize the value search field              |
 | `list`      | List of facet options - override to change checkbox structure or styling |
-| `show_more` | "Show more" button - override to customize expand/collapse behavior      |
+| `show_more` | "Show more" button - override to customize the limit toggle              |
 
 ## Default Layout
 
@@ -51,22 +53,66 @@ The property is automatically determined when using the generic Facet component:
     'data-controller': 'ux-search--refinement-list',
     'data-ux-search--refinement-list-limit-value': this.limit,
     'data-ux-search--refinement-list-value-type-value': this.valueType|default('auto'),
+    'data-ux-search-facet-collapsed': (this.collapsible and this.collapsed) ? 'true' : 'false',
+    'data-ux-search-facet-expand-label': 'facet.expand'|trans({'%facet%': label}, domain='mezcalito_ux_search'),
+    'data-ux-search-facet-collapse-label': 'facet.collapse'|trans({'%facet%': label}, domain='mezcalito_ux_search'),
     'data-ux-search--refinement-list-show-more-label-value': 'show_more'|trans(domain='mezcalito_ux_search'),
     'data-ux-search--refinement-list-show-less-label-value': 'show_less'|trans(domain='mezcalito_ux_search')
 }) }}>
     <legend class="ux-search-facet__title ux-search-refinement-list__title ux-search-refinement-list__header d-flex align-items-center justify-content-between gap-2">
-        <span class="ux-search-refinement-list__title-text">{% block label %}{{ label }}{% endblock %}</span>
+        <span class="ux-search-refinement-list__title-group d-inline-flex align-items-center gap-1 min-w-0">
+            <span
+                class="ux-search-refinement-list__title-text"
+                {% if this.collapsible %}
+                    role="button"
+                    tabindex="0"
+                    aria-expanded="{{ this.collapsed ? 'false' : 'true' }}"
+                    aria-controls="{{ property }}-facet-panel"
+                    data-ux-search-facet-toggle
+                    data-action="click->ux-search#toggleFacetCollapse"
+                {% endif %}
+            >{% block label %}{{ label }}{% endblock %}</span>
+            {% if this.collapsible %}
+                <button
+                    class="ux-search-refinement-list__collapse btn btn-icon btn-sm btn-ghost-secondary"
+                    type="button"
+                    aria-expanded="{{ this.collapsed ? 'false' : 'true' }}"
+                    aria-controls="{{ property }}-facet-panel"
+                    data-ux-search-facet-toggle
+                    data-action="ux-search#toggleFacetCollapse"
+                >
+                    {# Chevron icon #}
+                    <span class="ux-search-sr-only" data-ux-search-facet-label>
+                        {{ (this.collapsed ? 'facet.expand' : 'facet.collapse')|trans({'%facet%': label}, domain='mezcalito_ux_search') }}
+                    </span>
+                </button>
+            {% endif %}
+        </span>
         {% if hasMultipleValues %}
             {% block sort %}
-                <select class="ux-search-refinement-list__sort form-select form-select-sm w-auto">
-                    <option value="count_desc">{{ 'facet.sort_options.count_desc'|trans(domain='mezcalito_ux_search') }}</option>
-                    <option value="count_asc">{{ 'facet.sort_options.count_asc'|trans(domain='mezcalito_ux_search') }}</option>
-                    {# Value sort options are shown based on valueType: string, number, or date. #}
-                </select>
+                <div class="ux-search-refinement-list__sort dropdown">
+                    <select class="ux-search-sr-only" data-ux-search--refinement-list-target="sort">
+                        <option value="count_desc">{{ 'facet.sort_options.count_desc'|trans(domain='mezcalito_ux_search') }}</option>
+                        <option value="count_asc">{{ 'facet.sort_options.count_asc'|trans(domain='mezcalito_ux_search') }}</option>
+                        {# Value sort options are shown based on valueType: string, number, or date. #}
+                    </select>
+                    <button class="ux-search-refinement-list__sort-toggle btn btn-action btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        {# Selected sort icon #}
+                    </button>
+                    <div class="ux-search-refinement-list__sort-menu dropdown-menu dropdown-menu-end">
+                        {# Icon + label sort choices #}
+                    </div>
+                </div>
             {% endblock %}
         {% endif %}
     </legend>
 
+    <div
+        class="ux-search-refinement-list__panel"
+        id="{{ property }}-facet-panel"
+        data-ux-search-facet-panel
+        {% if this.collapsible and this.collapsed %}hidden{% endif %}
+    >
     {% if this.searchable and hasShowMore %}
         {% block search %}
             <div class="ux-search-refinement-list__search">
@@ -125,6 +171,7 @@ The property is automatically determined when using the generic Facet component:
             </button>
         {% endblock %}
     {% endif %}
+</div>
 </fieldset>
 ```
 
@@ -182,6 +229,8 @@ class ProductSearch extends AbstractSearch
 - `limit` - Number of facet values to display before "show more" (default: defined in component)
 - `searchable` - Show a local search input when values exceed `limit` (default: `true`)
 - `valueType` - Controls the value-specific sort labels and comparison. Use `string`, `number`, or `date`; omit it to auto-detect from rendered values.
+- `collapsible` - Make the header title and chevron collapse the facet body (default: `true`)
+- `collapsed` - Render the facet body collapsed initially (default: `false`)
 
 Control visibility:
 - 1 value: no search, no sort
@@ -195,7 +244,10 @@ Default classes:
 - `.ux-search-refinement-list` - Main fieldset element
 - `.ux-search-refinement-list__title` - Facet title/legend
 - `.ux-search-refinement-list__header` - Facet title and sort dropdown row
+- `.ux-search-refinement-list__title-group` - Facet title and chevron group
 - `.ux-search-refinement-list__title-text` - Facet title text
+- `.ux-search-refinement-list__collapse` - Collapse/expand chevron button
+- `.ux-search-refinement-list__panel` - Collapsible facet body
 - `.ux-search-refinement-list__sort` - Local sort dropdown
 - `.ux-search-refinement-list__search` - Search input wrapper
 - `.ux-search-refinement-list__search-input` - Local value search field

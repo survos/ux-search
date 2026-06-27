@@ -107,6 +107,10 @@
   z-index: 10;
 }
 
+.ux-search__facets .offcanvas-footer {
+  display: none;
+}
+
 @media (max-width: 767.98px) {
   .ux-search__facets .offcanvas-body {
     flex: 1;
@@ -114,6 +118,7 @@
   }
 
   .ux-search__facets .offcanvas-footer {
+    display: block;
     flex-shrink: 0;
     padding: 1rem;
     border-top: 1px solid var(--bs-border-color);

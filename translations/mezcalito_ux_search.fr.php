@@ -26,6 +26,9 @@ return [
     'facet' => [
         'search' => 'Rechercher dans %facet%',
         'search_placeholder' => 'Rechercher des valeurs...',
+        'no_search_results' => 'Aucun résultat de recherche',
+        'expand' => 'Déplier %facet%',
+        'collapse' => 'Replier %facet%',
         'sort' => 'Trier %facet%',
         'sort_options' => [
             'count_desc' => 'Plus de résultats',

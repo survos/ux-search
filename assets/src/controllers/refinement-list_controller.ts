@@ -26,7 +26,20 @@ export default class extends Controller {
   declare valueTypeValue: string;
   declare limitValue: number;
 
-  static targets = ['toggle', 'searchInput', 'list', 'item', 'label', 'count', 'sort', 'sortOption'];
+  static targets = [
+    'toggle',
+    'searchInput',
+    'list',
+    'item',
+    'label',
+    'count',
+    'sort',
+    'sortOption',
+    'sortChoice',
+    'sortToggle',
+    'sortIcon',
+    'noResults',
+  ];
 
   declare hasToggleTarget: boolean;
   declare toggleTarget: HTMLButtonElement;
@@ -39,8 +52,16 @@ export default class extends Controller {
   declare hasSortTarget: boolean;
   declare sortTarget: HTMLSelectElement;
   declare sortOptionTargets: HTMLOptionElement[];
+  declare sortChoiceTargets: HTMLButtonElement[];
+  declare hasSortToggleTarget: boolean;
+  declare sortToggleTarget: HTMLButtonElement;
+  declare hasSortIconTarget: boolean;
+  declare sortIconTarget: HTMLElement;
+  declare hasNoResultsTarget: boolean;
+  declare noResultsTarget: HTMLElement;
 
   mutationObserver!: MutationObserver;
+  private sortOptionsFrame: number | null = null;
 
   initialize() {
     this.mutationObserver = new MutationObserver(this.handleMutation);
@@ -58,6 +79,22 @@ export default class extends Controller {
     this.updateToggleLabel();
   };
 
+  sortTargetConnected() {
+    this.scheduleSortOptionsConfiguration();
+  }
+
+  sortOptionTargetConnected() {
+    this.scheduleSortOptionsConfiguration();
+  }
+
+  sortChoiceTargetConnected() {
+    this.scheduleSortOptionsConfiguration();
+  }
+
+  labelTargetConnected() {
+    this.scheduleSortOptionsConfiguration();
+  }
+
   isShowingMoreValueChanged() {
     this.updateToggleLabel();
   }
@@ -71,11 +108,32 @@ export default class extends Controller {
 
     const query = this.normalize(this.searchInputTarget.value);
     this.isSearchingValue = query.length > 0;
+    let matchingItems = 0;
 
     this.itemTargets.forEach((item, index) => {
       const label = this.labelTargets[index]?.textContent ?? '';
-      item.classList.toggle('ux-search-refinement-list__item--hidden', !this.normalize(label).includes(query));
+      const isMatching = this.normalize(label).includes(query);
+
+      if (isMatching) {
+        matchingItems++;
+      }
+
+      item.classList.toggle('ux-search-refinement-list__item--hidden', !isMatching);
     });
+
+    this.updateNoResults(this.isSearchingValue && matchingItems === 0);
+  }
+
+  selectSort(event: Event) {
+    if (!this.hasSortTarget) return;
+
+    const choice = event.currentTarget as HTMLButtonElement;
+    const value = choice.dataset.sortValue;
+
+    if (!value) return;
+
+    this.sortTarget.value = value;
+    this.sort();
   }
 
   sort() {
@@ -102,6 +160,7 @@ export default class extends Controller {
     items.forEach((item) => this.listTarget.append(item));
     this.updateLimitedItems();
     this.search();
+    this.updateSortToggle();
   }
 
   /**
@@ -113,6 +172,12 @@ export default class extends Controller {
     this.toggleTarget.innerHTML = this.isShowingMoreValue ? this.showLessLabelValue : this.showMoreLabelValue;
   }
 
+  private updateNoResults(isVisible: boolean) {
+    if (!this.hasNoResultsTarget) return;
+
+    this.noResultsTarget.hidden = !isVisible;
+  }
+
   private configureSortOptions() {
     if (!this.hasSortTarget) return;
 
@@ -122,9 +187,51 @@ export default class extends Controller {
       option.hidden = option.dataset.valueType !== valueType;
     });
 
+    this.sortChoiceTargets.forEach((choice) => {
+      const choiceValueType = choice.dataset.valueType;
+      const isHidden = !!choiceValueType && choiceValueType !== valueType;
+
+      choice.hidden = isHidden;
+      choice.classList.toggle('d-none', isHidden);
+      choice.setAttribute('aria-hidden', isHidden ? 'true' : 'false');
+    });
+
     if (this.sortTarget.selectedOptions[0]?.hidden) {
       this.sortTarget.value = 'count_desc';
     }
+
+    this.updateSortToggle();
+  }
+
+  private updateSortToggle() {
+    if (!this.hasSortTarget || !this.hasSortToggleTarget) return;
+
+    const selectedValue = this.sortTarget.value;
+    const selectedChoice = this.sortChoiceTargets.find((choice) => choice.dataset.sortValue === selectedValue);
+    const selectedLabel = selectedChoice?.dataset.sortLabel ?? this.sortTarget.selectedOptions[0]?.textContent?.trim() ?? '';
+    const selectedIcon = selectedChoice?.querySelector<HTMLElement>('[data-sort-icon]');
+
+    this.sortToggleTarget.title = selectedLabel;
+    this.sortToggleTarget.setAttribute('aria-label', selectedLabel);
+
+    this.sortChoiceTargets.forEach((choice) => {
+      const isSelected = choice.dataset.sortValue === selectedValue;
+      choice.classList.toggle('active', isSelected);
+      choice.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    });
+
+    if (this.hasSortIconTarget && selectedIcon) {
+      this.sortIconTarget.innerHTML = selectedIcon.innerHTML;
+    }
+  }
+
+  private scheduleSortOptionsConfiguration() {
+    if (this.sortOptionsFrame !== null) return;
+
+    this.sortOptionsFrame = window.requestAnimationFrame(() => {
+      this.sortOptionsFrame = null;
+      this.configureSortOptions();
+    });
   }
 
   private updateLimitedItems() {
@@ -210,6 +317,11 @@ export default class extends Controller {
   }
 
   disconnect() {
+    if (this.sortOptionsFrame !== null) {
+      window.cancelAnimationFrame(this.sortOptionsFrame);
+      this.sortOptionsFrame = null;
+    }
+
     this.mutationObserver.disconnect();
   }
 }

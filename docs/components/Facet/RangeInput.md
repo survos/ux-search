@@ -2,6 +2,8 @@
 
 The `RangeInput` component allows users to filter numeric ranges by entering minimum and maximum values in text input fields. This provides precise control compared to a slider.
 
+The facet header title and chevron toggle collapse by default. Use `collapsed` to render it closed initially, or `collapsible: false` to disable the toggle.
+
 ## Usage
 
 ```twig
@@ -127,7 +129,7 @@ class ProductSearch extends AbstractSearch
         $this
             ->addFacet('price', 'Price Range', RangeInputComponent::class)
             ->addFacet('rating', 'Rating Range', RangeInputComponent::class)
-            ->addFacet('year', 'Year', RangeInputComponent::class);
+            ->addFacet('year', 'Year', RangeInputComponent::class, ['collapsed' => true]);
     }
 }
 ```

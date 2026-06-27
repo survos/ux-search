@@ -18,6 +18,32 @@ class controller extends Controller {
         const { min, max } = this.getRangeValues(form, property, parseFloat(rangeMin), parseFloat(rangeMax));
         await this.component.action('updateFacetRange', { property, min, max });
     }
+    toggleFacetCollapse(event) {
+        if (event instanceof KeyboardEvent && event.key === ' ') {
+            event.preventDefault();
+        }
+        const trigger = event.currentTarget;
+        const facet = trigger?.closest('[data-ux-search-facet-collapsed]');
+        if (!facet) {
+            return;
+        }
+        const isCollapsed = facet.dataset.uxSearchFacetCollapsed === 'true';
+        const isNextCollapsed = !isCollapsed;
+        facet.dataset.uxSearchFacetCollapsed = isNextCollapsed ? 'true' : 'false';
+        const panel = facet.querySelector('[data-ux-search-facet-panel]');
+        if (panel) {
+            panel.hidden = isNextCollapsed;
+        }
+        facet.querySelectorAll('[data-ux-search-facet-toggle]').forEach((toggle) => {
+            toggle.setAttribute('aria-expanded', isNextCollapsed ? 'false' : 'true');
+        });
+        const label = facet.querySelector('[data-ux-search-facet-label]');
+        if (label) {
+            label.textContent = isNextCollapsed
+                ? facet.dataset.uxSearchFacetExpandLabel ?? ''
+                : facet.dataset.uxSearchFacetCollapseLabel ?? '';
+        }
+    }
     getRangeValues(form, property, rangeMin, rangeMax) {
         const data = new FormData(form);
         const getValue = (suffix) => {
