@@ -23,6 +23,21 @@ return [
         'min' => 'Min',
         'max' => 'Max',
     ],
+    'facet' => [
+        'search' => 'Rechercher dans %facet%',
+        'search_placeholder' => 'Rechercher des valeurs...',
+        'sort' => 'Trier %facet%',
+        'sort_options' => [
+            'count_desc' => 'Plus de résultats',
+            'count_asc' => 'Moins de résultats',
+            'string_asc' => 'A à Z',
+            'string_desc' => 'Z à A',
+            'number_asc' => 'Plus bas en premier',
+            'number_desc' => 'Plus haut en premier',
+            'date_desc' => 'Plus récent en premier',
+            'date_asc' => 'Plus ancien en premier',
+        ],
+    ],
     'pagination' => [
         'previous_page' => 'Page précédente',
         'next_page' => 'Page suivante',

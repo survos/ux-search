@@ -2,14 +2,23 @@ import { Controller } from '@hotwired/stimulus';
 
 class default_1 extends Controller {
     static values = {
+        limit: Number,
         isShowingMore: {
             type: Boolean,
             default: false,
         },
         showMoreLabel: String,
         showLessLabel: String,
+        isSearching: {
+            type: Boolean,
+            default: false,
+        },
+        valueType: {
+            type: String,
+            default: 'auto',
+        },
     };
-    static targets = ['toggle'];
+    static targets = ['toggle', 'searchInput', 'list', 'item', 'label', 'count', 'sort', 'sortOption'];
     mutationObserver;
     initialize() {
         this.mutationObserver = new MutationObserver(this.handleMutation);
@@ -18,6 +27,8 @@ class default_1 extends Controller {
         this.mutationObserver.observe(this.element, {
             childList: true,
         });
+        this.configureSortOptions();
+        this.sort();
     }
     handleMutation = () => {
         this.updateToggleLabel();
@@ -28,10 +39,113 @@ class default_1 extends Controller {
     toggleShowMore() {
         this.isShowingMoreValue = !this.isShowingMoreValue;
     }
+    search() {
+        if (!this.hasSearchInputTarget)
+            return;
+        const query = this.normalize(this.searchInputTarget.value);
+        this.isSearchingValue = query.length > 0;
+        this.itemTargets.forEach((item, index) => {
+            const label = this.labelTargets[index]?.textContent ?? '';
+            item.classList.toggle('ux-search-refinement-list__item--hidden', !this.normalize(label).includes(query));
+        });
+    }
+    sort() {
+        if (!this.hasSortTarget)
+            return;
+        const sortValue = this.sortTarget.value;
+        const valueType = this.getValueType();
+        const items = [...this.itemTargets];
+        items.sort((itemA, itemB) => {
+            const indexA = this.itemTargets.indexOf(itemA);
+            const indexB = this.itemTargets.indexOf(itemB);
+            if ('count_asc' === sortValue || 'count_desc' === sortValue) {
+                const countA = this.getCount(indexA);
+                const countB = this.getCount(indexB);
+                return 'count_asc' === sortValue ? countA - countB : countB - countA;
+            }
+            return this.compareValues(this.getLabel(indexA), this.getLabel(indexB), valueType, sortValue.endsWith('_desc'));
+        });
+        items.forEach((item) => this.listTarget.append(item));
+        this.updateLimitedItems();
+        this.search();
+    }
     updateToggleLabel() {
         if (!this.hasToggleTarget)
             return;
         this.toggleTarget.innerHTML = this.isShowingMoreValue ? this.showLessLabelValue : this.showMoreLabelValue;
+    }
+    configureSortOptions() {
+        if (!this.hasSortTarget)
+            return;
+        const valueType = this.getValueType();
+        this.sortOptionTargets.forEach((option) => {
+            option.hidden = option.dataset.valueType !== valueType;
+        });
+        if (this.sortTarget.selectedOptions[0]?.hidden) {
+            this.sortTarget.value = 'count_desc';
+        }
+    }
+    updateLimitedItems() {
+        this.itemTargets.forEach((item, index) => {
+            item.classList.toggle('ux-search-refinement-list__item--exceed-limit', index >= this.limitValue);
+        });
+    }
+    getValueType() {
+        const configuredValueType = this.normalize(this.valueTypeValue || 'auto');
+        if (['date', 'number', 'string'].includes(configuredValueType)) {
+            return configuredValueType;
+        }
+        return this.guessValueType();
+    }
+    guessValueType() {
+        const labels = this.labelTargets.map((label) => (label.textContent ?? '').trim()).filter((label) => label.length > 0);
+        if (labels.length > 0 && labels.every((label) => /^\d{4}$/.test(label))) {
+            return 'date';
+        }
+        if (labels.length > 0 && labels.every((label) => this.parseNumber(label) !== null)) {
+            return 'number';
+        }
+        if (labels.length > 0 && labels.every((label) => this.parseDate(label) !== null)) {
+            return 'date';
+        }
+        return 'string';
+    }
+    compareValues(valueA, valueB, valueType, descending) {
+        let comparison;
+        if ('date' === valueType) {
+            comparison = (this.parseDate(valueA) ?? 0) - (this.parseDate(valueB) ?? 0);
+        }
+        else if ('number' === valueType) {
+            comparison = (this.parseNumber(valueA) ?? 0) - (this.parseNumber(valueB) ?? 0);
+        }
+        else {
+            comparison = valueA.localeCompare(valueB, undefined, { numeric: true, sensitivity: 'base' });
+        }
+        return descending ? comparison * -1 : comparison;
+    }
+    getLabel(index) {
+        return this.labelTargets[index]?.textContent?.trim() ?? '';
+    }
+    getCount(index) {
+        return Number.parseFloat((this.countTargets[index]?.textContent ?? '').replace(/[^\d.-]/g, '')) || 0;
+    }
+    parseNumber(value) {
+        const normalizedValue = value.trim().replace(/,/g, '');
+        if (!/^-?\d+(\.\d+)?$/.test(normalizedValue)) {
+            return null;
+        }
+        return Number.parseFloat(normalizedValue);
+    }
+    parseDate(value) {
+        const normalizedValue = value.trim();
+        if (/^\d{4}$/.test(normalizedValue)) {
+            return Date.UTC(Number.parseInt(normalizedValue, 10), 0, 1);
+        }
+        const timestamp = Date.parse(normalizedValue);
+        return Number.isNaN(timestamp) ? null : timestamp;
+    }
+    normalize(value) {
+        return value.trim().toLocaleLowerCase();
     }
     disconnect() {
         this.mutationObserver.disconnect();

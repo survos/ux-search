@@ -23,6 +23,21 @@ return [
         'min' => 'Min',
         'max' => 'Max',
     ],
+    'facet' => [
+        'search' => 'Search %facet%',
+        'search_placeholder' => 'Search',
+        'sort' => 'Sort %facet%',
+        'sort_options' => [
+            'count_desc' => 'Most Results',
+            'count_asc' => 'Fewest Results',
+            'string_asc' => 'A → Z',
+            'string_desc' => 'Z → A',
+            'number_asc' => 'Lowest First',
+            'number_desc' => 'Highest First',
+            'date_desc' => 'Newest First',
+            'date_asc' => 'Oldest First',
+        ],
+    ],
     'pagination' => [
         'previous_page' => 'Previous page',
         'next_page' => 'Next page',

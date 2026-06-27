@@ -20,6 +20,10 @@ class RefinementList extends AbstractFacet
 {
     public int $limit = 10;
 
+    public bool $searchable = true;
+
+    public ?string $valueType = null;
+
     #[ExposeInTemplate]
     public function getDistribution(): FacetTermDistribution
     {

@@ -1,6 +1,6 @@
 # RefinementList Component
 
-The `RefinementList` component allows users to filter search results based on facet values (terms). It displays a list of checkbox options with result counts, and supports a "show more" feature for facets with many values.
+The `RefinementList` component allows users to filter search results based on facet values (terms). It displays checkbox options with result counts, local sorting when there are multiple values, and a search input only when the facet has enough values to show the "show more" control.
 
 ## Usage
 
@@ -25,6 +25,8 @@ The property is automatically determined when using the generic Facet component:
 | `distribution.values`           | array                 | Array of facet values with their counts             |
 | `distribution.isChecked(value)` | bool                  | Whether a value is currently selected               |
 | `limit`                         | int                   | Number of items to display before "show more"       |
+| `searchable`                    | bool                  | Whether to show a local search input when values exceed `limit` |
+| `valueType`                     | ?string               | Value type for sorting: `string`, `number`, `date`, or auto-detected |
 | `attributes`                    | ComponentAttributes   | HTML attributes for the container                   |
 
 ## Blocks Available
@@ -32,27 +34,64 @@ The property is automatically determined when using the generic Facet component:
 | Block Name  | Description                                                              |
 |-------------|--------------------------------------------------------------------------|
 | `label`     | Facet title/legend - override to customize the facet heading             |
+| `sort`      | Sort dropdown - override to customize local facet value sorting          |
+| `search`    | Search input - override to customize the value search field              |
 | `list`      | List of facet options - override to change checkbox structure or styling |
 | `show_more` | "Show more" button - override to customize expand/collapse behavior      |
 
 ## Default Layout
 
 ```twig
+{% set valuesCount = distribution.values|length %}
+{% set hasMultipleValues = valuesCount > 1 %}
+{% set hasShowMore = valuesCount > this.limit %}
 <fieldset {{ attributes.defaults({
     class: 'ux-search-facet ux-search-refinement-list',
     'data-skip-morph': true,
     'data-controller': 'ux-search--refinement-list',
     'data-ux-search--refinement-list-limit-value': this.limit,
+    'data-ux-search--refinement-list-value-type-value': this.valueType|default('auto'),
     'data-ux-search--refinement-list-show-more-label-value': 'show_more'|trans(domain='mezcalito_ux_search'),
     'data-ux-search--refinement-list-show-less-label-value': 'show_less'|trans(domain='mezcalito_ux_search')
 }) }}>
-    <legend class="ux-search-facet__title ux-search-refinement-list__title">{% block label %}{{ label }}{% endblock %}</legend>
+    <legend class="ux-search-facet__title ux-search-refinement-list__title ux-search-refinement-list__header d-flex align-items-center justify-content-between gap-2">
+        <span class="ux-search-refinement-list__title-text">{% block label %}{{ label }}{% endblock %}</span>
+        {% if hasMultipleValues %}
+            {% block sort %}
+                <select class="ux-search-refinement-list__sort form-select form-select-sm w-auto">
+                    <option value="count_desc">{{ 'facet.sort_options.count_desc'|trans(domain='mezcalito_ux_search') }}</option>
+                    <option value="count_asc">{{ 'facet.sort_options.count_asc'|trans(domain='mezcalito_ux_search') }}</option>
+                    {# Value sort options are shown based on valueType: string, number, or date. #}
+                </select>
+            {% endblock %}
+        {% endif %}
+    </legend>
+
+    {% if this.searchable and hasShowMore %}
+        {% block search %}
+            <div class="ux-search-refinement-list__search">
+                <label class="ux-search-sr-only" for="{{ property }}-facet-search">
+                    {{ 'facet.search'|trans({'%facet%': label}, domain='mezcalito_ux_search') }}
+                </label>
+                <input
+                    class="ux-search-refinement-list__search-input ux-search-input form-control form-control-sm"
+                    type="search"
+                    id="{{ property }}-facet-search"
+                    placeholder="{{ 'facet.search_placeholder'|trans(domain='mezcalito_ux_search') }}"
+                    autocomplete="off"
+                    data-ux-search--refinement-list-target="searchInput"
+                    data-action="input->ux-search--refinement-list#search"
+                >
+            </div>
+        {% endblock %}
+    {% endif %}
 
     {% block list %}
-        <ul class="ux-search-refinement-list__list">
+        <ul class="ux-search-refinement-list__list" data-ux-search--refinement-list-target="list">
             {%- for key,value in distribution.values %}
                 <li
                     class="ux-search-refinement-list__item{{ loop.index > this.limit ? ' ux-search-refinement-list__item--exceed-limit' }}"
+                    data-ux-search--refinement-list-target="item"
                 >
                     <input
                         class="ux-search-refinement-list__input"
@@ -66,15 +105,15 @@ The property is automatically determined when using the generic Facet component:
                         data-live-value-param="{{ key }}"
                     >
                     <label class="ux-search-refinement-list__label" for="{{ property }}-{{ key }}">
-                        <span class="ux-search-refinement-list__label-text">{{ key }}</span>
-                        <span class="ux-search-refinement-list__count">{{ value }}</span>
+                        <span class="ux-search-refinement-list__label-text" data-ux-search--refinement-list-target="label">{{ key }}</span>
+                        <span class="ux-search-refinement-list__count" data-ux-search--refinement-list-target="count">{{ value }}</span>
                     </label>
                 </li>
             {% endfor -%}
         </ul>
     {% endblock %}
 
-    {% if distribution.values|length > this.limit %}
+    {% if hasShowMore %}
         {% block show_more %}
             <button
                 class="ux-search-refinement-list__show-more"
@@ -131,13 +170,23 @@ class ProductSearch extends AbstractSearch
             ->addFacet('brand', 'Brand')
             ->addFacet('category', 'Category')
             ->addFacet('color', 'Color', null, ['limit' => 10]) // Show max 10 values
-            ->addFacet('size', 'Size', null, ['limit' => 5]);
+            ->addFacet('size', 'Size', null, ['limit' => 5])
+            ->addFacet('year', 'Year', null, ['valueType' => 'date'])
+            ->addFacet('rating', 'Rating', null, ['valueType' => 'number'])
+            ->addFacet('tag', 'Tag', null, ['searchable' => false]); // Hide value search
     }
 }
 ```
 
 **Options:**
 - `limit` - Number of facet values to display before "show more" (default: defined in component)
+- `searchable` - Show a local search input when values exceed `limit` (default: `true`)
+- `valueType` - Controls the value-specific sort labels and comparison. Use `string`, `number`, or `date`; omit it to auto-detect from rendered values.
+
+Control visibility:
+- 1 value: no search, no sort
+- 2+ values without "show more": sort only
+- Values exceeding `limit`: sort and search
 
 ## Styling
 
@@ -145,9 +194,15 @@ Default classes:
 - `.ux-search-facet` - Shared facet container class
 - `.ux-search-refinement-list` - Main fieldset element
 - `.ux-search-refinement-list__title` - Facet title/legend
+- `.ux-search-refinement-list__header` - Facet title and sort dropdown row
+- `.ux-search-refinement-list__title-text` - Facet title text
+- `.ux-search-refinement-list__sort` - Local sort dropdown
+- `.ux-search-refinement-list__search` - Search input wrapper
+- `.ux-search-refinement-list__search-input` - Local value search field
 - `.ux-search-refinement-list__list` - List container
 - `.ux-search-refinement-list__item` - Individual facet option
 - `.ux-search-refinement-list__item--exceed-limit` - Hidden items beyond limit
+- `.ux-search-refinement-list__item--hidden` - Items hidden by the local search query
 - `.ux-search-refinement-list__input` - Checkbox input
 - `.ux-search-refinement-list__label` - Label wrapper
 - `.ux-search-refinement-list__label-text` - Value text

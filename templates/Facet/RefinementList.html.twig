@@ -1,17 +1,64 @@
+{% set valuesCount = distribution.values|length %}
+{% set hasMultipleValues = valuesCount > 1 %}
+{% set hasShowMore = valuesCount > this.limit %}
 <fieldset {{ attributes.defaults({
     class: 'ux-search-facet ux-search-refinement-list',
     'data-skip-morph': true,
     'data-controller': 'ux-search--refinement-list',
     'data-ux-search--refinement-list-limit-value': this.limit,
+    'data-ux-search--refinement-list-value-type-value': this.valueType|default('auto'),
     'data-ux-search--refinement-list-show-more-label-value': 'show_more'|trans(domain='mezcalito_ux_search'),
     'data-ux-search--refinement-list-show-less-label-value': 'show_less'|trans(domain='mezcalito_ux_search')
 }) }}>
-    <legend class="ux-search-facet__title ux-search-refinement-list__title">{% block label %}{{ label }}{% endblock %}</legend>
+    <legend class="ux-search-facet__title ux-search-refinement-list__title ux-search-refinement-list__header d-flex align-items-center justify-content-between gap-2">
+        <span class="ux-search-refinement-list__title-text">{% block label %}{{ label }}{% endblock %}</span>
+        {% if hasMultipleValues %}
+            {% block sort %}
+                <label class="ux-search-sr-only" for="{{ property }}-facet-sort">
+                    {{ 'facet.sort'|trans({'%facet%': label}, domain='mezcalito_ux_search') }}
+                </label>
+                <select
+                    class="ux-search-refinement-list__sort form-select form-select-sm w-auto"
+                    id="{{ property }}-facet-sort"
+                    data-ux-search--refinement-list-target="sort"
+                    data-action="change->ux-search--refinement-list#sort"
+                >
+                    <option value="count_desc">{{ 'facet.sort_options.count_desc'|trans(domain='mezcalito_ux_search') }}</option>
+                    <option value="count_asc">{{ 'facet.sort_options.count_asc'|trans(domain='mezcalito_ux_search') }}</option>
+                    <option value="string_asc" data-ux-search--refinement-list-target="sortOption" data-value-type="string">{{ 'facet.sort_options.string_asc'|trans(domain='mezcalito_ux_search') }}</option>
+                    <option value="string_desc" data-ux-search--refinement-list-target="sortOption" data-value-type="string">{{ 'facet.sort_options.string_desc'|trans(domain='mezcalito_ux_search') }}</option>
+                    <option value="number_asc" data-ux-search--refinement-list-target="sortOption" data-value-type="number">{{ 'facet.sort_options.number_asc'|trans(domain='mezcalito_ux_search') }}</option>
+                    <option value="number_desc" data-ux-search--refinement-list-target="sortOption" data-value-type="number">{{ 'facet.sort_options.number_desc'|trans(domain='mezcalito_ux_search') }}</option>
+                    <option value="date_desc" data-ux-search--refinement-list-target="sortOption" data-value-type="date">{{ 'facet.sort_options.date_desc'|trans(domain='mezcalito_ux_search') }}</option>
+                    <option value="date_asc" data-ux-search--refinement-list-target="sortOption" data-value-type="date">{{ 'facet.sort_options.date_asc'|trans(domain='mezcalito_ux_search') }}</option>
+                </select>
+            {% endblock %}
+        {% endif %}
+    </legend>
+    {% if this.searchable and hasShowMore %}
+        {% block search %}
+            <div class="ux-search-refinement-list__search">
+                <label class="ux-search-sr-only" for="{{ property }}-facet-search">
+                    {{ 'facet.search'|trans({'%facet%': label}, domain='mezcalito_ux_search') }}
+                </label>
+                <input
+                    class="ux-search-refinement-list__search-input ux-search-input form-control form-control-sm"
+                    type="search"
+                    id="{{ property }}-facet-search"
+                    placeholder="{{ 'facet.search_placeholder'|trans(domain='mezcalito_ux_search') }}"
+                    autocomplete="off"
+                    data-ux-search--refinement-list-target="searchInput"
+                    data-action="input->ux-search--refinement-list#search"
+                >
+            </div>
+        {% endblock %}
+    {% endif %}
     {% block list %}
-        <ul class="ux-search-refinement-list__list">
+        <ul class="ux-search-refinement-list__list" data-ux-search--refinement-list-target="list">
             {%- for key,value in distribution.values %}
                 <li
                     class="ux-search-refinement-list__item{{ loop.index > this.limit ? ' ux-search-refinement-list__item--exceed-limit' }}"
+                    data-ux-search--refinement-list-target="item"
                 >
                     <input
                         class="ux-search-refinement-list__input"
@@ -25,14 +72,14 @@
                         data-live-value-param="{{ key }}"
                     >
                     <label class="ux-search-refinement-list__label" for="{{ property }}-{{ key }}">
-                        <span class="ux-search-refinement-list__label-text">{{ key }}</span>
-                        <span class="ux-search-refinement-list__count">{{ value }}</span>
+                        <span class="ux-search-refinement-list__label-text" data-ux-search--refinement-list-target="label">{{ key }}</span>
+                        <span class="ux-search-refinement-list__count" data-ux-search--refinement-list-target="count">{{ value }}</span>
                     </label>
                 </li>
             {% endfor -%}
         </ul>
     {% endblock %}
-    {% if distribution.values|length > this.limit %}
+    {% if hasShowMore %}
         {% block show_more %}
             <button
                 class="ux-search-refinement-list__show-more"

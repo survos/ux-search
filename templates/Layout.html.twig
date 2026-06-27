@@ -49,7 +49,7 @@
                     ></button>
                 </div>
 
-                <div class="offcanvas-body p-3">
+                <div class="offcanvas-body">
                     {% for facet in search.facets %}
                         <twig:Mezcalito:UxSearch:Facet :property="facet.property" />
                     {% endfor %}
