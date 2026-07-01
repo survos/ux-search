@@ -59,8 +59,14 @@ class controller extends Controller {
     }
     updateUrl(url) {
         Promise.resolve().then(() => {
-            if (window.location.href !== url) {
-                history.replaceState(history.state, '', url);
+            // Same-origin RELATIVE url (path + query + hash): the server may hand us an absolute URL
+            // whose scheme differs from the page (http:// behind a TLS-terminating proxy/CDN), and
+            // replaceState() rejects a cross-origin URL with a SecurityError. Relative can't be cross-origin.
+            const target = new URL(url, window.location.href);
+            const relative = target.pathname + target.search + target.hash;
+            const current = window.location.pathname + window.location.search + window.location.hash;
+            if (current !== relative) {
+                history.replaceState(history.state, '', relative);
             }
         });
     }

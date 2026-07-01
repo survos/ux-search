@@ -84,8 +84,15 @@ export default class extends Controller<HTMLElement> {
   updateUrl(url: string) {
     // Defer to avoid race conditions with Live Component internal history updates
     Promise.resolve().then(() => {
-      if (window.location.href !== url) {
-        history.replaceState(history.state, '', url);
+      // Always push a same-origin RELATIVE url (path + query + hash). The server may hand us an
+      // absolute URL whose scheme differs from the page — e.g. http:// when TLS is terminated by an
+      // upstream proxy/CDN — and replaceState() rejects a cross-origin URL with a SecurityError.
+      // A relative url can never be cross-origin, so this holds regardless of proxy/scheme config.
+      const target = new URL(url, window.location.href);
+      const relative = target.pathname + target.search + target.hash;
+      const current = window.location.pathname + window.location.search + window.location.hash;
+      if (current !== relative) {
+        history.replaceState(history.state, '', relative);
       }
     });
   }
