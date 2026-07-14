@@ -1,3 +1,29 @@
+{%- macro page_item(iterator, page) %}
+    {%- if page == iterator %}
+        <li class="page-item active" aria-current="page">
+            <span class="page-link">{{ iterator }}</span>
+        </li>
+    {% else %}
+        <li class="page-item">
+            <a
+                class="page-link"
+                href="?page={{ iterator }}"
+                data-action="live#action:prevent"
+                data-live-action-param="changeCurrentPage"
+                data-live-page-param="{{ iterator }}"
+            >
+                {{ iterator }}
+            </a>
+        </li>
+    {% endif -%}
+{% endmacro -%}
+
+{%- macro ellipsis() %}
+    <li class="page-item disabled">
+        <span class="page-link">…</span>
+    </li>
+{% endmacro -%}
+
 {%- block content %}
     {%- if totalPage > 1 %}
         <nav {{ attributes.defaults({
@@ -82,30 +108,4 @@
             </ul>
         </nav>
     {% endif -%}
-
-    {%- macro page_item(iterator, page) %}
-        {%- if page == iterator %}
-            <li class="page-item active" aria-current="page">
-                <span class="page-link">{{ iterator }}</span>
-            </li>
-        {% else %}
-            <li class="page-item">
-                <a
-                    class="page-link"
-                    href="?page={{ iterator }}"
-                    data-action="live#action:prevent"
-                    data-live-action-param="changeCurrentPage"
-                    data-live-page-param="{{ iterator }}"
-                >
-                    {{ iterator }}
-                </a>
-            </li>
-        {% endif -%}
-    {% endmacro -%}
-
-    {%- macro ellipsis() %}
-        <li class="page-item disabled">
-            <span class="page-link">…</span>
-        </li>
-    {% endmacro -%}
 {% endblock -%}
