@@ -24,6 +24,9 @@ class ResultSet
 
     private int $totalResults = 0;
 
+    /** @var array<string, mixed> */
+    private array $metadata = [];
+
     /** @var array<string, FacetTermDistribution> */
     private array $facetDistributions = [];
 
@@ -68,6 +71,20 @@ class ResultSet
     public function setTotalResults(int $totalResults): static
     {
         $this->totalResults = $totalResults;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed> */
+    public function getMetadata(): array
+    {
+        return $this->metadata;
+    }
+
+    /** @param array<string, mixed> $metadata */
+    public function setMetadata(array $metadata): static
+    {
+        $this->metadata = $metadata;
 
         return $this;
     }

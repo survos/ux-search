@@ -21,6 +21,8 @@ class Hit
     public function __construct(
         private array|object $data,
         private float $score,
+        /** @var array<string, mixed> */
+        private array $metadata = [],
     ) {
     }
 
@@ -50,6 +52,20 @@ class Hit
     public function setScore(float $score): self
     {
         $this->score = $score;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed> */
+    public function getMetadata(): array
+    {
+        return $this->metadata;
+    }
+
+    /** @param array<string, mixed> $metadata */
+    public function setMetadata(array $metadata): self
+    {
+        $this->metadata = $metadata;
 
         return $this;
     }
