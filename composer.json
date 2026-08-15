@@ -6,11 +6,6 @@
   "replace": {
     "mezcalito/ux-search": "*"
   },
-  "extra": {
-    "branch-alias": {
-      "dev-0.x": "1.0.x-dev"
-    }
-  },
   "keywords": [
     "symfony-ux", "listing", "search", "meilisearch", "faceted search"
   ],
